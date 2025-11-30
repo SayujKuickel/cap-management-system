@@ -15,18 +15,32 @@ import {
   type PersonalDetailsValues,
 } from "@/validation/application/personal-details";
 import ApplicationStepHeader from "./application-step-header";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function PersonalDetailsForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const personalDetailsMutation = useApplicationStepMutations(applicationId)[1];
+  const stepId = 1; // Personal Details is step 1
+  const personalDetailsMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<PersonalDetailsValues>({
     resolver: zodResolver(personalDetailsSchema),
     defaultValues: defaultPersonalDetailsValues,
   });
 
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
+  });
+
   const onSubmit = (values: PersonalDetailsValues) => {
+    // Save to localStorage before submitting to API
+    if (applicationId) {
+      saveOnSubmit(values);
+    }
     personalDetailsMutation.mutate(values);
   };
 

@@ -14,17 +14,27 @@ import {
   employmentSchema,
   type EmploymentFormValues,
 } from "@/validation/application/employment";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function EmploymentForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const employmentMutation = useApplicationStepMutations(applicationId)[8];
+  const stepId = 8; // Employment is step 8
+  const employmentMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<EmploymentFormValues>({
     resolver: zodResolver(employmentSchema),
     defaultValues: {
       entries: [createEmptyEmploymentEntry()],
     },
+  });
+
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
   });
 
   const { control, handleSubmit } = methods;
@@ -37,6 +47,10 @@ export default function EmploymentForm() {
   const canAddMore = fields.length < 10;
 
   const onSubmit = (values: EmploymentFormValues) => {
+    // Save to localStorage before submitting to API
+    if (applicationId) {
+      saveOnSubmit(values);
+    }
     employmentMutation.mutate(values);
   };
 

@@ -8,11 +8,13 @@ import type { ApplicationCreateValues } from "@/validation/application.validatio
 import type { ApplicationDetailResponse } from "@/service/application.service";
 import type { ServiceResponse } from "@/types/service";
 import { siteRoutes } from "@/constants/site-routes";
+import { usePersistence } from "./usePersistance.hook";
 
 export const useApplicationSubmitMutation = (applicationId: string | null) => {
   const router = useRouter();
+  const { clearPersistedData } = usePersistence(applicationId);
 
-  return useMutation<unknown, Error, void>({
+  return useMutation<ApplicationDetailResponse, Error, void>({
     mutationKey: ["application-submit", applicationId],
     mutationFn: async () => {
       if (!applicationId) throw new Error("Missing application reference.");
@@ -22,6 +24,7 @@ export const useApplicationSubmitMutation = (applicationId: string | null) => {
       );
 
       if (!response.success) throw new Error(response.message);
+      if (!response.data) throw new Error("Application data is missing from response.");
 
       return response.data;
     },
@@ -30,6 +33,11 @@ export const useApplicationSubmitMutation = (applicationId: string | null) => {
         applicationId,
         response: data,
       });
+      
+      // Clear persisted data after successful submission
+      // The API response contains all form data if needed for other purposes
+      clearPersistedData();
+      
       router.push(siteRoutes.dashboard.application.root);
     },
     onError: (error) => {
@@ -38,8 +46,10 @@ export const useApplicationSubmitMutation = (applicationId: string | null) => {
   });
 };
 
-export const useApplicationGetMutation = (applicationId: string | null) =>
-  useMutation<ServiceResponse<ApplicationDetailResponse>, Error, void>({
+export const useApplicationGetMutation = (applicationId: string | null) => {
+  const { populateFromApiResponse, clearPersistedData } = usePersistence(applicationId);
+
+  return useMutation<ServiceResponse<ApplicationDetailResponse>, Error, void>({
     mutationKey: ["application-get", applicationId],
     mutationFn: async () => {
       if (!applicationId) {
@@ -56,11 +66,20 @@ export const useApplicationGetMutation = (applicationId: string | null) =>
         applicationId,
         response,
       });
+      
+      // Clear any existing localStorage data first (API is source of truth)
+      clearPersistedData();
+      
+      // Populate form data from API response
+      if (response?.data) {
+        populateFromApiResponse(response.data);
+      }
     },
     onError: (error) => {
       console.error("[Application] getApplication failed", error);
     },
   });
+};
 
 const DEFAULT_CREATE_PAYLOAD_temp = {
   agent_profile_id: "ea7cab76-0e47-4de8-b923-834f0d53abf1",

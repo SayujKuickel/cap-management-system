@@ -12,18 +12,32 @@ import { FormInput } from "../../ui/forms/form-input";
 import { useSearchParams } from "next/navigation";
 import { useApplicationStepMutations } from "@/hooks/useApplicationSteps.hook";
 import ApplicationStepHeader from "./application-step-header";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function LanguageDefaultForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const languageMutation = useApplicationStepMutations(applicationId)[4];
+  const stepId = 4; // Language & Culture is step 4
+  const languageMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<LanguageAndCultureFormValues>({
     resolver: zodResolver(languageAndCultureSchema),
     defaultValues: defaultLanguageAndCultureValues,
   });
 
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
+  });
+
   const onSubmit = (values: LanguageAndCultureFormValues) => {
+    // Save to localStorage before submitting to API
+    if (applicationId) {
+      saveOnSubmit(values);
+    }
     const payload: LanguageAndCultureValues =
       languageAndCultureSchema.parse(values);
     languageMutation.mutate(payload);

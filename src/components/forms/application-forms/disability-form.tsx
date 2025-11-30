@@ -18,15 +18,25 @@ import {
 import { useSearchParams } from "next/navigation";
 import { useApplicationStepMutations } from "@/hooks/useApplicationSteps.hook";
 import ApplicationStepHeader from "./application-step-header";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function DisabilityForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const disabilityMutation = useApplicationStepMutations(applicationId)[5];
+  const stepId = 5; // Disability is step 5
+  const disabilityMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const form = useForm<DisabilityFormValues>({
     resolver: zodResolver(disabilitySchema),
     defaultValues: defaultDisabilityValues,
+  });
+
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: form,
+    enabled: !!applicationId,
   });
 
   const hasDisability = useWatch({
@@ -57,6 +67,10 @@ export default function DisabilityForm() {
   }, [hasDocumentation, form]);
 
   const onSubmit = (values: DisabilityFormValues) => {
+    // Save to localStorage before submitting to API
+    if (applicationId) {
+      saveOnSubmit(values);
+    }
     const payload: DisabilityValues = disabilitySchema.parse(values);
     disabilityMutation.mutate(payload);
   };

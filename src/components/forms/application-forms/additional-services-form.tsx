@@ -14,18 +14,28 @@ import {
   createEmptyAdditionalService,
   type AdditionalServicesValues,
 } from "@/validation/application/additional-services";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function AdditionalServicesForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
+  const stepId = 10; // Additional Services is step 10
   const additionalServicesMutation =
-    useApplicationStepMutations(applicationId)[10];
+    useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<AdditionalServicesValues>({
     resolver: zodResolver(additionalServicesSchema),
     defaultValues: {
       services: [createEmptyAdditionalService()],
     },
+  });
+
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
   });
 
   const { control, handleSubmit } = methods;
@@ -46,6 +56,10 @@ export default function AdditionalServicesForm() {
   const canAddMore = fields.length < 10; // tweak if you want
 
   const onSubmit = (values: AdditionalServicesValues) => {
+    // Save to localStorage before submitting to API
+    if (applicationId) {
+      saveOnSubmit(values);
+    }
     additionalServicesMutation.mutate(values);
   };
 

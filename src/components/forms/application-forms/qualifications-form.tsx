@@ -13,18 +13,28 @@ import {
   qualificationsSchema,
   type QualificationsFormValues,
 } from "@/validation/application/qualifications";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function QualificationsForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
+  const stepId = 7; // Qualifications is step 7
   const qualificationsMutation =
-    useApplicationStepMutations(applicationId)[7];
+    useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<QualificationsFormValues>({
     resolver: zodResolver(qualificationsSchema),
     defaultValues: {
       qualifications: [createEmptyQualification()],
     },
+  });
+
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
   });
 
   const { control, handleSubmit } = methods;
@@ -37,6 +47,10 @@ export default function QualificationsForm() {
   const canAddMore = fields.length < 10;
 
   const onSubmit = (values: QualificationsFormValues) => {
+    // Save to localStorage before submitting to API
+    if (applicationId) {
+      saveOnSubmit(values);
+    }
     qualificationsMutation.mutate(values);
   };
 

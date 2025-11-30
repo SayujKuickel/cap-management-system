@@ -14,17 +14,27 @@ import {
   schoolingSchema,
   type SchoolingValues,
 } from "@/validation/application/schooling";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function SchoolingForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const schoolingMutation = useApplicationStepMutations(applicationId)[6];
+  const stepId = 6; // Schooling is step 6
+  const schoolingMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<SchoolingValues>({
     resolver: zodResolver(schoolingSchema),
     defaultValues: {
       entries: [createEmptySchoolingEntry()],
     },
+  });
+
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
   });
 
   const { control, handleSubmit } = methods;
@@ -37,6 +47,10 @@ export default function SchoolingForm() {
   const canAddMore = fields.length < 10;
 
   const onSubmit = (values: SchoolingValues) => {
+    // Save to localStorage before submitting to API
+    if (applicationId) {
+      saveOnSubmit(values);
+    }
     schoolingMutation.mutate(values);
   };
 

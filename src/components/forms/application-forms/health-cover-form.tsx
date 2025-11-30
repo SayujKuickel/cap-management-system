@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -14,16 +15,52 @@ import {
   healthCoverSchema,
   type HealthCoverValues,
 } from "@/validation/application/health-cover";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
+import { usePersistence } from "@/hooks/usePersistance.hook";
 
 export default function HealthCoverForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const healthCoverMutation = useApplicationStepMutations(applicationId)[3];
+  const stepId = 3; // Health Cover is step 3
+  const healthCoverMutation = useApplicationStepMutations(applicationId)[stepId];
+  const { getStepData } = usePersistence(applicationId);
+
+  // Load persisted data and merge with defaults BEFORE creating form
+  const initialValues = useMemo(() => {
+    if (!applicationId) return defaultHealthCoverValues;
+    
+    const persistedData = getStepData<HealthCoverValues>(stepId);
+    if (persistedData) {
+      // Merge persisted data with defaults to ensure all fields are present
+      return { ...defaultHealthCoverValues, ...persistedData };
+    }
+    return defaultHealthCoverValues;
+  }, [applicationId, stepId, getStepData]);
 
   const methods = useForm<HealthCoverValues>({
     resolver: zodResolver(healthCoverSchema),
-    defaultValues: defaultHealthCoverValues,
+    defaultValues: initialValues,
   });
+
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
+  });
+
+  // Ensure form is reset with persisted data when component mounts
+  useEffect(() => {
+    if (!applicationId) return;
+    
+    const persistedData = getStepData<HealthCoverValues>(stepId);
+    if (persistedData) {
+      // Reset form with persisted data to ensure all fields are properly set
+      methods.reset({ ...defaultHealthCoverValues, ...persistedData });
+    }
+  }, [applicationId, stepId, methods, getStepData]);
+
   const { handleSubmit } = methods;
 
   return (
@@ -31,6 +68,10 @@ export default function HealthCoverForm() {
       <form
         className="space-y-6"
         onSubmit={handleSubmit((values) => {
+          // Save to localStorage before submitting to API
+          if (applicationId) {
+            saveOnSubmit(values);
+          }
           healthCoverMutation.mutate(values);
         })}
       >

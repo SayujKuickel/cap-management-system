@@ -13,11 +13,13 @@ import {
   surveySchema,
   type SurveyValues,
 } from "@/validation/application/survey";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function SurveyForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const surveyMutation = useApplicationStepMutations(applicationId)[11];
+  const stepId = 11; // Survey is step 11
+  const surveyMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<SurveyValues>({
     resolver: zodResolver(surveySchema),
@@ -26,6 +28,14 @@ export default function SurveyForm() {
       how_did_you_hear: "",
       referral_source: "",
     },
+  });
+
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
   });
 
   const { control, handleSubmit } = methods;
@@ -38,6 +48,10 @@ export default function SurveyForm() {
   const canAddMore = fields.length < 10;
 
   const onSubmit = (values: SurveyValues) => {
+    // Save to localStorage before submitting to API
+    if (applicationId) {
+      saveOnSubmit(values);
+    }
     surveyMutation.mutate(values);
   };
 

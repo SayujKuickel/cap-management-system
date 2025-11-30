@@ -15,18 +15,28 @@ import {
   emergencyContactsSchema,
   type EmergencyContactsValues,
 } from "@/validation/application/emergency-contacts";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function EmergencyContactForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
+  const stepId = 2; // Emergency Contact is step 2
   const emergencyContactMutation =
-    useApplicationStepMutations(applicationId)[2];
+    useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<EmergencyContactsValues>({
     resolver: zodResolver(emergencyContactsSchema),
     defaultValues: {
       contacts: [createEmptyContact()],
     },
+  });
+
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
   });
 
   const {
@@ -47,6 +57,10 @@ export default function EmergencyContactForm() {
       <form
         className="space-y-6"
         onSubmit={handleSubmit((values) => {
+          // Save to localStorage before submitting to API
+          if (applicationId) {
+            saveOnSubmit(values);
+          }
           emergencyContactMutation.mutate(values);
         })}
       >

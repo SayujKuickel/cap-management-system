@@ -14,20 +14,34 @@ import {
   usiSchema,
   type USIValues,
 } from "@/validation/application/usi";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
 export default function USIForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const usiMutation = useApplicationStepMutations(applicationId)[9];
+  const stepId = 9; // USI is step 9
+  const usiMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<USIValues>({
     resolver: zodResolver(usiSchema),
     defaultValues: defaultUSIValues,
   });
 
+  // Enable automatic form persistence
+  const { saveOnSubmit } = useFormPersistence({
+    applicationId,
+    stepId,
+    form: methods,
+    enabled: !!applicationId,
+  });
+
   const { handleSubmit } = methods;
 
   const onSubmit = (values: USIValues) => {
+    // Save to localStorage before submitting to API
+    if (applicationId) {
+      saveOnSubmit(values);
+    }
     usiMutation.mutate(values);
   };
 

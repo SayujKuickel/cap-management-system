@@ -11,10 +11,17 @@ import { APPLICATION_FORM_STEPS } from "./form-step-registry";
 import { TOTAL_APPLICATION_STEPS } from "@/constants/application-steps";
 import { cn } from "@/lib/utils";
 import { useApplicationStepStore } from "@/store/useApplicationStep.store";
-import { useApplicationCreateMutation } from "@/hooks/useApplication.hook";
+import {
+  useApplicationCreateMutation,
+  useApplicationGetMutation,
+} from "@/hooks/useApplication.hook";
+import { usePersistence } from "@/hooks/usePersistance.hook";
+
+const STORAGE_STEP_KEY = "application_current_step_";
 
 const NewApplicationForm = () => {
   const searchParams = useSearchParams();
+  const applicationId = searchParams.get("applicationId");
 
   const currentStep = useApplicationStepStore((state) => state.currentStep);
   const goToStep = useApplicationStepStore((state) => state.goToStep);
@@ -23,19 +30,40 @@ const NewApplicationForm = () => {
     (state) => state.isStepCompleted
   );
   const createApplication = useApplicationCreateMutation();
+  const { getAllPersistedData } = usePersistence(applicationId);
+
   const hasCreatedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
+  const hasInitializedStepRef = useRef(false);
+
+  // Fetch application data if applicationId exists (loads saved form data)
+  const {
+    mutate: fetchApplication,
+    isPending: isFetchingApplication,
+  } = useApplicationGetMutation(applicationId);
 
   useEffect(() => {
     setTotalSteps(TOTAL_APPLICATION_STEPS);
   }, [setTotalSteps]);
 
+  // Fetch application data if applicationId exists (to populate forms from API)
+  useEffect(() => {
+    if (!applicationId || hasFetchedRef.current) return;
+
+    hasFetchedRef.current = true;
+    fetchApplication();
+  }, [applicationId, fetchApplication]);
+
+  // Reset fetch guard if applicationId changes
+  useEffect(() => {
+    hasFetchedRef.current = false;
+  }, [applicationId]);
+
+  // Create application if no applicationId exists
   useEffect(() => {
     if (hasCreatedRef.current) return;
 
-    // Prefer existing id from URL
-    const existingId = searchParams.get("applicationId");
-    if (existingId) {
-      // already in URL, nothing else to do
+    if (applicationId) {
       hasCreatedRef.current = true;
       return;
     }
@@ -47,9 +75,75 @@ const NewApplicationForm = () => {
       course_offering_id: "4ba78380-8158-4941-9420-a1495d88e9d6",
     };
 
-    // Simply call mutate - success/error handling is inside the hook
     createApplication.mutate(defaultPayload);
-  }, [createApplication, searchParams]);
+  }, [createApplication, applicationId]);
+
+  // Restore last step position from localStorage
+  useEffect(() => {
+    if (!applicationId || hasInitializedStepRef.current) return;
+
+    try {
+      const stepKey = `${STORAGE_STEP_KEY}${applicationId}`;
+      const savedStep = localStorage.getItem(stepKey);
+
+      if (savedStep) {
+        const stepNumber = parseInt(savedStep, 10);
+        if (
+          stepNumber >= 1 &&
+          stepNumber <= TOTAL_APPLICATION_STEPS &&
+          !isNaN(stepNumber)
+        ) {
+          goToStep(stepNumber);
+        }
+      }
+
+      // Check if there's persisted form data and restore to appropriate step
+      const persistedData = getAllPersistedData();
+      if (persistedData) {
+        // Find the highest completed step
+        const completedSteps = Object.keys(persistedData)
+          .filter((key) => {
+            const stepId = parseInt(key, 10);
+            return (
+              !isNaN(stepId) &&
+              stepId >= 1 &&
+              stepId <= TOTAL_APPLICATION_STEPS &&
+              persistedData[stepId]
+            );
+          })
+          .map((key) => parseInt(key, 10))
+          .sort((a, b) => b - a);
+
+        if (completedSteps.length > 0) {
+          // Go to the step after the last completed step, or stay on current
+          const lastCompletedStep = completedSteps[0];
+          const nextStep = Math.min(
+            lastCompletedStep + 1,
+            TOTAL_APPLICATION_STEPS
+          );
+          if (nextStep > currentStep) {
+            goToStep(nextStep);
+          }
+        }
+      }
+
+      hasInitializedStepRef.current = true;
+    } catch (error) {
+      console.error("[NewApplicationForm] Failed to restore step position:", error);
+    }
+  }, [applicationId, currentStep, goToStep, getAllPersistedData]);
+
+  // Save current step to localStorage
+  useEffect(() => {
+    if (!applicationId) return;
+
+    try {
+      const stepKey = `${STORAGE_STEP_KEY}${applicationId}`;
+      localStorage.setItem(stepKey, currentStep.toString());
+    } catch (error) {
+      console.error("[NewApplicationForm] Failed to save step position:", error);
+    }
+  }, [applicationId, currentStep]);
 
   const handleStepNavigation = useCallback(
     (stepId: number) => {
@@ -86,7 +180,7 @@ const NewApplicationForm = () => {
                     }}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors",
-                      "flex-shrink-0",
+                      "shrink-0",
                       currentStep === step.id
                         ? "bg-primary text-primary-foreground col-span-3 lg:col-span-1"
                         : "hover:bg-muted justify-center lg:justify-start lg:w-full"
@@ -94,7 +188,7 @@ const NewApplicationForm = () => {
                   >
                     <div
                       className={cn(
-                        "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs",
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs",
                         currentStep === step.id
                           ? "bg-primary-foreground text-primary"
                           : isStepCompleted(step.id)
