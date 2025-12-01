@@ -229,7 +229,7 @@ export default function DocumentsUploadForm() {
               uploaded: true,
             },
           };
-        });
+        });       
       } catch (error) {
         console.error("Upload failed:", error);
         setDocumentStates((prev) => {
