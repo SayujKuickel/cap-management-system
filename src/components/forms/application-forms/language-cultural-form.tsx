@@ -17,7 +17,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function LanguageDefaultForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 4; // Language & Culture is step 4
+  const stepId = 5; // Language & Culture is step 5
   const languageMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<LanguageAndCultureFormValues>({

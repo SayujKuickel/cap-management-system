@@ -87,65 +87,65 @@ const useStepMutation = <TInput>(
 };
 
 export const useApplicationStepMutations = (applicationId: string | null) => ({
-  1: useStepMutation<PersonalDetailsValues>(
-    1,
+  2: useStepMutation<PersonalDetailsValues>(
+    2,
     (id, payload) => applicationStepsService.updatePersonalDetails(id, payload),
     applicationId
   ),
-  2: useStepMutation<EmergencyContactValues>(
-    2,
+  3: useStepMutation<EmergencyContactValues>(
+    3,
     (id, payload) =>
       applicationStepsService.updateEmergencyContact(id, payload),
     applicationId
   ),
-  3: useStepMutation<HealthCoverValues>(
-    3,
+  4: useStepMutation<HealthCoverValues>(
+    4,
     (id, payload) => applicationStepsService.updateHealthCover(id, payload),
     applicationId
   ),
-  4: useStepMutation<LanguageCulturalValues>(
-    4,
+  5: useStepMutation<LanguageCulturalValues>(
+    5,
     (id, payload) =>
       applicationStepsService.updateLanguageCultural(id, payload),
     applicationId
   ),
-  5: useStepMutation<DisabilitySupportValues>(
-    5,
+  6: useStepMutation<DisabilitySupportValues>(
+    6,
     (id, payload) =>
       applicationStepsService.updateDisabilitySupport(id, payload),
     applicationId
   ),
-  6: useStepMutation<SchoolingHistoryValues>(
-    6,
+  7: useStepMutation<SchoolingHistoryValues>(
+    7,
     (id, payload) =>
       applicationStepsService.updateSchoolingHistory(id, payload),
     applicationId
   ),
-  7: useStepMutation<PreviousQualificationsValues>(
-    7,
+  8: useStepMutation<PreviousQualificationsValues>(
+    8,
     (id, payload) =>
       applicationStepsService.updatePreviousQualifications(id, payload),
     applicationId
   ),
-  8: useStepMutation<EmploymentHistoryValues>(
-    8,
+  9: useStepMutation<EmploymentHistoryValues>(
+    9,
     (id, payload) =>
       applicationStepsService.updateEmploymentHistory(id, payload),
     applicationId
   ),
-  9: useStepMutation<UsiValues>(
-    9,
+  10: useStepMutation<UsiValues>(
+    10,
     (id, payload) => applicationStepsService.updateUsi(id, payload),
     applicationId
   ),
-  10: useStepMutation<AdditionalServicesValues>(
-    10,
+  11: useStepMutation<AdditionalServicesValues>(
+    11,
     (id, payload) =>
       applicationStepsService.updateAdditionalServices(id, payload),
     applicationId
   ),
-  11: useStepMutation<SurveyValues>(
-    11,
+  12: useStepMutation<SurveyValues>(
+    12,
     (id, payload) => applicationStepsService.updateSurvey(id, payload),
     applicationId
   ),

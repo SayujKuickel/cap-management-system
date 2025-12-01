@@ -21,7 +21,7 @@ import { usePersistence } from "@/hooks/usePersistance.hook";
 export default function HealthCoverForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 3; // Health Cover is step 3
+  const stepId = 4; // Health Cover is step 4
   const healthCoverMutation = useApplicationStepMutations(applicationId)[stepId];
   const { getStepData } = usePersistence(applicationId);
 

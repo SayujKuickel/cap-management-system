@@ -20,7 +20,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function PersonalDetailsForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 1; // Personal Details is step 1
+  const stepId = 2; // Personal Details is step 2
   const personalDetailsMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<PersonalDetailsValues>({

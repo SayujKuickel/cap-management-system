@@ -20,7 +20,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function EmergencyContactForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 2; // Emergency Contact is step 2
+  const stepId = 3; // Emergency Contact is step 3
   const emergencyContactMutation =
     useApplicationStepMutations(applicationId)[stepId];
 

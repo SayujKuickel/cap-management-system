@@ -142,59 +142,60 @@ export const usePersistence = (applicationId: string | null) => {
         };
 
         // Map API response fields to step IDs
-        // Step 1: Personal Details
+        // Note: Step 1 is Documents (no API data mapping needed, handled separately)
+        // Step 2: Personal Details
         if (apiResponse.personal_details) {
-          persistedData[1] = apiResponse.personal_details;
+          persistedData[2] = apiResponse.personal_details;
         }
 
-        // Step 2: Emergency Contact
+        // Step 3: Emergency Contact
         if (apiResponse.emergency_contacts) {
-          persistedData[2] = apiResponse.emergency_contacts;
+          persistedData[3] = apiResponse.emergency_contacts;
         }
 
-        // Step 3: Health Cover
+        // Step 4: Health Cover
         if (apiResponse.health_cover_policy) {
-          persistedData[3] = apiResponse.health_cover_policy;
+          persistedData[4] = apiResponse.health_cover_policy;
         }
 
-        // Step 4: Language & Culture
+        // Step 5: Language & Culture
         if (apiResponse.language_cultural_data) {
-          persistedData[4] = apiResponse.language_cultural_data;
+          persistedData[5] = apiResponse.language_cultural_data;
         }
 
-        // Step 5: Disability Support
+        // Step 6: Disability Support
         if (apiResponse.disability_support) {
-          persistedData[5] = apiResponse.disability_support;
+          persistedData[6] = apiResponse.disability_support;
         }
 
-        // Step 6: Schooling History
+        // Step 7: Schooling History
         if (apiResponse.schooling_history) {
-          persistedData[6] = apiResponse.schooling_history;
+          persistedData[7] = apiResponse.schooling_history;
         }
 
-        // Step 7: Qualifications
+        // Step 8: Qualifications
         if (apiResponse.qualifications) {
-          persistedData[7] = apiResponse.qualifications;
+          persistedData[8] = apiResponse.qualifications;
         }
 
-        // Step 8: Employment History
+        // Step 9: Employment History
         if (apiResponse.employment_history) {
-          persistedData[8] = apiResponse.employment_history;
+          persistedData[9] = apiResponse.employment_history;
         }
 
-        // Step 9: USI (stored as usi field in response)
+        // Step 10: USI (stored as usi field in response)
         if (apiResponse.usi) {
-          persistedData[9] = { usi: apiResponse.usi };
+          persistedData[10] = { usi: apiResponse.usi };
         }
 
-        // Step 10: Additional Services
+        // Step 11: Additional Services
         if (apiResponse.additional_services) {
-          persistedData[10] = apiResponse.additional_services;
+          persistedData[11] = apiResponse.additional_services;
         }
 
-        // Step 11: Survey
+        // Step 12: Survey
         if (apiResponse.survey_responses) {
-          persistedData[11] = apiResponse.survey_responses;
+          persistedData[12] = apiResponse.survey_responses;
         }
 
         localStorage.setItem(storageKey, JSON.stringify(persistedData));

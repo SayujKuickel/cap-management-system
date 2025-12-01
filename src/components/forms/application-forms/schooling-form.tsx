@@ -19,7 +19,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function SchoolingForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 6; // Schooling is step 6
+  const stepId = 7; // Schooling is step 7
   const schoolingMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<SchoolingValues>({

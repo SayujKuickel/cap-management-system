@@ -18,7 +18,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function SurveyForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 11; // Survey is step 11
+  const stepId = 12; // Survey is step 12
   const surveyMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<SurveyValues>({

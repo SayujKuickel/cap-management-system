@@ -19,7 +19,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function AdditionalServicesForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 10; // Additional Services is step 10
+  const stepId = 11; // Additional Services is step 11
   const additionalServicesMutation =
     useApplicationStepMutations(applicationId)[stepId];
 
