@@ -38,7 +38,7 @@ export const useUploadDocument = () => {
       return response;
     },
     onSuccess: (response, variables) => {
-      toast.success(response.message || "Document uploaded successfully");
+    
       // Invalidate related queries
       queryClient.invalidateQueries({
         queryKey: ["application-documents", variables.application_id],

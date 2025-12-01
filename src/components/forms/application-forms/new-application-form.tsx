@@ -16,6 +16,7 @@ import {
   useApplicationGetMutation,
 } from "@/hooks/useApplication.hook";
 import { usePersistence } from "@/hooks/usePersistance.hook";
+import { documentTypes } from "@/data/document-types.data";
 
 const STORAGE_STEP_KEY = "application_current_step_";
 
@@ -46,6 +47,36 @@ const NewApplicationForm = () => {
   const hasInitializedRef = useRef(false);
   const hasCreatedRef = useRef(false);
   const hasFetchedRef = useRef(false);
+  
+  // Check if step 1 (Documents) is completed based on localStorage
+  useEffect(() => {
+    if (!applicationId) return;
+    
+    try {
+      const persistedData = getAllPersistedData();
+      const documentsData = persistedData?.[1] as
+        | { documents?: Record<string, { fileCount: number; uploaded: boolean }> }
+        | undefined;
+      
+      // Check if all mandatory documents have been uploaded
+      if (documentsData?.documents) {
+        const mandatoryDocs = documentTypes.filter(
+          (doc) => doc.is_mandatory
+        );
+        
+        const allMandatoryUploaded = mandatoryDocs.every((doc) => {
+          const docData = documentsData.documents?.[doc.id];
+          return docData && docData.fileCount > 0 && docData.uploaded;
+        });
+        
+        if (allMandatoryUploaded && !isStepCompleted(1)) {
+          useApplicationStepStore.getState().markStepCompleted(1);
+        }
+      }
+    } catch (error) {
+      // Silently fail - step completion check is optional
+    }
+  }, [applicationId, getAllPersistedData, isStepCompleted, currentStep]);
 
   // Initialize total steps and step position
   useLayoutEffect(() => {

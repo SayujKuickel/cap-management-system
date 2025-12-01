@@ -1,130 +1,204 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useForm, FormProvider } from "react-hook-form";
-import { Upload, X, FileText, CheckCircle2, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { useSearchParams } from "next/navigation";
-import { useDocuments } from "@/hooks/document.hook";
-import ApplicationStepHeader from "./application-step-header";
-import { useApplicationStepStore } from "@/store/useApplicationStep.store";
-import { usePersistence } from "@/hooks/usePersistance.hook";
 import { documentTypes } from "@/data/document-types.data";
+import { useDocuments } from "@/hooks/document.hook";
+import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
+import { cn } from "@/lib/utils";
+import { useApplicationStepStore } from "@/store/useApplicationStep.store";
+import {
+  CheckCircle2,
+  FileCheck2,
+  FileText,
+  Loader2,
+  Upload,
+  X
+} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FormProvider, useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
+import ApplicationStepHeader from "./application-step-header";
 
-// Sort document types by display_order
+// Types
+type FileUploadState = {
+  file: File;
+  uploading: boolean;
+  uploaded: boolean;
+  error?: string;
+};
+
+type UploadedFileMetadata = {
+  fileName: string;
+  fileSize: number;
+  uploadedAt: string;
+};
+
+type DocumentState = {
+  documentTypeId: string;
+  files: FileUploadState[];
+  uploadedFiles: UploadedFileMetadata[]; // Persisted uploaded files
+  uploaded: boolean;
+};
+
+type DocumentsFormData = {
+  documents: Record<string, {
+    documentTypeId: string;
+    uploadedFiles: UploadedFileMetadata[];
+    uploaded: boolean;
+  }>;
+};
+
 const sortedDocumentTypes = [...documentTypes].sort(
   (a, b) => a.display_order - b.display_order
 );
 
-type DocumentUploadState = {
-  documentTypeId: string;
-  files: File[];
-  uploaded: boolean;
+const STEP_ID = 1;
+
+// Helper Functions
+const createInitialState = (): Record<string, DocumentState> => {
+  const state: Record<string, DocumentState> = {};
+  sortedDocumentTypes.forEach((docType) => {
+    state[docType.id] = {
+      documentTypeId: docType.id,
+      files: [],
+      uploadedFiles: [],
+      uploaded: false,
+    };
+  });
+  return state;
 };
 
-type DocumentsFormValues = {
-  documents: Record<string, DocumentUploadState>;
+const hasUploadedFiles = (state: DocumentState): boolean => {
+  return state.files.some((f) => f.uploaded) || state.uploadedFiles.length > 0;
 };
 
-const defaultDocumentsFormValues: DocumentsFormValues = {
-  documents: {},
+const isAllMandatoryUploaded = (
+  documentStates: Record<string, DocumentState>
+): boolean => {
+  const mandatoryDocs = sortedDocumentTypes.filter((doc) => doc.is_mandatory);
+  return mandatoryDocs.every((doc) => {
+    const state = documentStates[doc.id];
+    return state && hasUploadedFiles(state);
+  });
 };
 
+const convertToFormData = (
+  documentStates: Record<string, DocumentState>
+): DocumentsFormData => {
+  const documents: DocumentsFormData["documents"] = {};
+  Object.keys(documentStates).forEach((key) => {
+    const state = documentStates[key];
+    // Combine newly uploaded files with persisted uploaded files
+    const newUploaded = state.files
+      .filter((f) => f.uploaded && !f.error)
+      .map((f) => ({
+        fileName: f.file.name,
+        fileSize: f.file.size,
+        uploadedAt: new Date().toISOString(),
+      }));
+    
+    // Merge with existing uploaded files, avoiding duplicates
+    const existingUploaded = state.uploadedFiles || [];
+    const allUploaded = [
+      ...existingUploaded,
+      ...newUploaded.filter(
+        (newFile) =>
+          !existingUploaded.some(
+            (existing) => existing.fileName === newFile.fileName && existing.fileSize === newFile.fileSize
+          )
+      ),
+    ];
+
+    documents[key] = {
+      documentTypeId: state.documentTypeId,
+      uploadedFiles: allUploaded,
+      uploaded: allUploaded.length > 0,
+    };
+  });
+  return { documents };
+};
+
+// Main Component
 export default function DocumentsUploadForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 1; // Documents is step 1
   const { uploadDocument } = useDocuments(applicationId);
   const goToNext = useApplicationStepStore((state) => state.goToNext);
   const markStepCompleted = useApplicationStepStore(
     (state) => state.markStepCompleted
   );
-  const { getStepData, saveStepData } = usePersistence(applicationId);
-
-  // Initialize document states from document types
-  const [documentStates, setDocumentStates] = useState<
-    Record<string, DocumentUploadState>
-  >(() => {
-    const initial: Record<string, DocumentUploadState> = {};
-    sortedDocumentTypes.forEach((docType) => {
-      initial[docType.id] = {
-        documentTypeId: docType.id,
-        files: [],
-        uploaded: false,
-      };
-    });
-    return initial;
+  const [documentStates, setDocumentStates] =
+    useState<Record<string, DocumentState>>(createInitialState);
+  const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  
+  const methods = useForm<DocumentsFormData>({
+    defaultValues: { documents: {} },
   });
 
-  const methods = useForm<DocumentsFormValues>({
-    defaultValues: defaultDocumentsFormValues,
-  });
-
-  // Load persisted data (metadata only - File objects can't be restored from localStorage)
-  useEffect(() => {
-    if (!applicationId) return;
-
-    const persistedData = getStepData<{ documents: Record<string, { documentTypeId: string; fileCount: number; uploaded: boolean }> }>(stepId);
-    if (persistedData && persistedData.documents) {
-      // Restore upload status - files are already uploaded to API, so we just track that
-      setDocumentStates((prev) => {
-        const updated = { ...prev };
-        Object.keys(persistedData.documents).forEach((key) => {
-          const metadata = persistedData.documents[key];
-          if (updated[key]) {
-            updated[key] = {
-              ...updated[key],
-              uploaded: metadata.uploaded,
-              // Files array stays empty - files are already uploaded to API
-            };
-          }
+  // Use form persistence hook
+  const { saveOnSubmit } = useFormPersistence<DocumentsFormData>({
+    applicationId,
+    stepId: STEP_ID,
+    form: methods,
+    onDataLoaded: (data) => {
+      // Restore uploaded files from persisted data
+      if (data?.documents) {
+        setDocumentStates((prev) => {
+          const updated = { ...prev };
+          Object.keys(data.documents).forEach((key) => {
+            const persisted = data.documents[key];
+            if (updated[key]) {
+              updated[key] = {
+                ...updated[key],
+                uploadedFiles: persisted.uploadedFiles || [],
+                uploaded: persisted.uploaded || false,
+              };
+            }
+          });
+          return updated;
         });
-        return updated;
-      });
-    }
-  }, [applicationId, stepId, getStepData]);
+      }
+    },
+  });
 
-  // Save to persistence when document states change (only metadata, not File objects)
+  const mandatoryDocs = useMemo(
+    () => sortedDocumentTypes.filter((doc) => doc.is_mandatory),
+    []
+  );
+
+  const allMandatoryUploaded = useMemo(
+    () => isAllMandatoryUploaded(documentStates),
+    [documentStates]
+  );
+
+  const isAnyFileUploading = uploadingFiles.size > 0;
+
+  // Auto-save form data
   useEffect(() => {
     if (!applicationId) return;
     
-    // Create metadata-only version for persistence (File objects can't be serialized)
-    const metadataOnly: Record<string, { documentTypeId: string; fileCount: number; uploaded: boolean }> = {};
-    Object.keys(documentStates).forEach((key) => {
-      const state = documentStates[key];
-      metadataOnly[key] = {
-        documentTypeId: state.documentTypeId,
-        fileCount: state.files.length,
-        uploaded: state.uploaded,
-      };
-    });
-    
-    saveStepData(stepId, { documents: metadataOnly });
-  }, [documentStates, applicationId, stepId, saveStepData]);
+    const formData = convertToFormData(documentStates);
+    methods.setValue("documents", formData.documents);
 
-  const handleFileSelect = async (
-    documentTypeId: string,
-    files: FileList | null
-  ) => {
-    if (!files || !applicationId) return;
+    if (isAllMandatoryUploaded(documentStates)) {
+      markStepCompleted(STEP_ID);
+    }
+  }, [documentStates, applicationId, methods, markStepCompleted]);
 
-    const fileArray = Array.from(files);
+  // Handle file upload
+  const uploadSingleFile = useCallback(
+    async (
+      documentTypeId: string,
+      file: File,
+      fileKey: string
+    ): Promise<void> => {
+      if (!applicationId) return;
 
-    // Update local state immediately
-    setDocumentStates((prev) => ({
-      ...prev,
-      [documentTypeId]: {
-        ...prev[documentTypeId],
-        files: [...(prev[documentTypeId]?.files || []), ...fileArray],
-      },
-    }));
+      setUploadingFiles((prev) => new Set(prev).add(fileKey));
 
-    // Upload each file
-    for (const file of fileArray) {
       try {
         await uploadDocument.mutateAsync({
           application_id: applicationId,
@@ -132,92 +206,179 @@ export default function DocumentsUploadForm() {
           file,
         });
 
-        // Mark as uploaded after successful upload
-        setDocumentStates((prev) => ({
-          ...prev,
-          [documentTypeId]: {
-            ...prev[documentTypeId],
-            uploaded: true,
-          },
-        }));
+        setDocumentStates((prev) => {
+          const currentFiles = prev[documentTypeId]?.files || [];
+          const existingUploaded = prev[documentTypeId]?.uploadedFiles || [];
+          
+          return {
+            ...prev,
+            [documentTypeId]: {
+              ...prev[documentTypeId],
+              files: currentFiles.map((f) =>
+                f.file === file ? { ...f, uploading: false, uploaded: true } : f
+              ),
+              // Add to uploadedFiles when upload succeeds
+              uploadedFiles: [
+                ...existingUploaded,
+                {
+                  fileName: file.name,
+                  fileSize: file.size,
+                  uploadedAt: new Date().toISOString(),
+                },
+              ],
+              uploaded: true,
+            },
+          };
+        });
       } catch (error) {
-        console.error("Failed to upload document:", error);
-        // Remove the file from state if upload failed
-        setDocumentStates((prev) => ({
+        console.error("Upload failed:", error);
+        setDocumentStates((prev) => {
+          const currentFiles = prev[documentTypeId]?.files || [];
+          return {
+            ...prev,
+            [documentTypeId]: {
+              ...prev[documentTypeId],
+              files: currentFiles.map((f) =>
+                f.file === file
+                  ? {
+                      ...f,
+                      uploading: false,
+                      uploaded: false,
+                      error: "Upload failed",
+                    }
+                  : f
+              ),
+            },
+          };
+        });
+      } finally {
+        setUploadingFiles((prev) => {
+          const next = new Set(prev);
+          next.delete(fileKey);
+          return next;
+        });
+      }
+    },
+    [applicationId, uploadDocument]
+  );
+
+  const handleFileSelect = useCallback(
+    async (documentTypeId: string, files: FileList | null) => {
+      if (!files || !applicationId) return;
+
+      const fileArray = Array.from(files);
+
+      // Add files to state
+      setDocumentStates((prev) => ({
+        ...prev,
+        [documentTypeId]: {
+          ...prev[documentTypeId],
+          files: [
+            ...(prev[documentTypeId]?.files || []),
+            ...fileArray.map((file) => ({
+              file,
+              uploading: true,
+              uploaded: false,
+            })),
+          ],
+        },
+      }));
+
+      // Upload each file
+      for (const file of fileArray) {
+        const fileKey = `${documentTypeId}-${file.name}-${file.size}`;
+        await uploadSingleFile(documentTypeId, file, fileKey);
+      }
+    },
+    [applicationId, uploadSingleFile]
+  );
+
+  const handleFileRemove = useCallback(
+    (documentTypeId: string, fileIndex: number) => {
+      setDocumentStates((prev) => {
+        const currentFiles = prev[documentTypeId]?.files || [];
+        const fileToRemove = currentFiles[fileIndex];
+
+        // Remove from uploading set if needed
+        if (fileToRemove?.uploading) {
+          const fileKey = `${documentTypeId}-${fileToRemove.file.name}-${fileToRemove.file.size}`;
+          setUploadingFiles((prevSet) => {
+            const next = new Set(prevSet);
+            next.delete(fileKey);
+            return next;
+          });
+        }
+
+        // If file was uploaded, also remove from uploadedFiles
+        const updatedUploadedFiles = fileToRemove?.uploaded
+          ? (prev[documentTypeId]?.uploadedFiles || []).filter(
+              (f) => !(f.fileName === fileToRemove.file.name && f.fileSize === fileToRemove.file.size)
+            )
+          : prev[documentTypeId]?.uploadedFiles || [];
+
+        return {
           ...prev,
           [documentTypeId]: {
             ...prev[documentTypeId],
-            files: prev[documentTypeId]?.files.filter((f) => f !== file) || [],
+            files: currentFiles.filter((_, i) => i !== fileIndex),
+            uploadedFiles: updatedUploadedFiles,
+            uploaded: updatedUploadedFiles.length > 0,
           },
-        }));
-      }
-    }
-  };
-
-  const handleFileRemove = (documentTypeId: string, fileIndex: number) => {
-    setDocumentStates((prev) => ({
-      ...prev,
-      [documentTypeId]: {
-        ...prev[documentTypeId],
-        files: prev[documentTypeId]?.files.filter((_, i) => i !== fileIndex),
-      },
-    }));
-  };
-
-  const handleContinue = () => {
-    if (!applicationId) return;
-
-    // Check if all mandatory documents are uploaded
-    const mandatoryDocs = sortedDocumentTypes.filter((doc) => doc.is_mandatory);
-    const missingMandatory = mandatoryDocs.filter((doc) => {
-      const state = documentStates[doc.id];
-      // A document is valid if it has files (selected/uploading/uploaded)
-      return !state || state.files.length === 0;
-    });
-
-    // Block continuation if required documents are missing
-    if (missingMandatory.length > 0) {
-      const missingNames = missingMandatory.map((doc) => doc.name).join(", ");
-      toast.error(
-        `Please upload all required documents: ${missingNames}`,
-        { duration: 5000 }
-      );
-      return;
-    }
-
-    // Save final state
-    const metadataOnly: Record<string, { documentTypeId: string; fileCount: number; uploaded: boolean }> = {};
-    Object.keys(documentStates).forEach((key) => {
-      const state = documentStates[key];
-      metadataOnly[key] = {
-        documentTypeId: state.documentTypeId,
-        fileCount: state.files.length,
-        uploaded: state.uploaded,
-      };
-    });
-    
-    saveStepData(stepId, { documents: metadataOnly });
-
-    // Mark step as completed and go to next
-    markStepCompleted(stepId);
-    goToNext();
-  };
-
-  // Check if all mandatory documents are uploaded
-  const mandatoryDocs = useMemo(
-    () => sortedDocumentTypes.filter((doc) => doc.is_mandatory),
+        };
+      });
+    },
     []
   );
 
-  const allMandatoryUploaded = useMemo(
-    () =>
-      mandatoryDocs.every((doc) => {
-        const state = documentStates[doc.id];
-        // A document is valid if it has files (selected/uploading/uploaded)
-        return state && state.files.length > 0;
-      }),
-    [mandatoryDocs, documentStates]
+  const handleRemovePersistedFile = useCallback(
+    (documentTypeId: string, fileName: string, fileSize: number) => {
+      setDocumentStates((prev) => {
+        const existingUploaded = prev[documentTypeId]?.uploadedFiles || [];
+        return {
+          ...prev,
+          [documentTypeId]: {
+            ...prev[documentTypeId],
+            uploadedFiles: existingUploaded.filter(
+              (f) => !(f.fileName === fileName && f.fileSize === fileSize)
+            ),
+            uploaded: existingUploaded.length > 1,
+          },
+        };
+      });
+    },
+    []
   );
+
+  const handleContinue = useCallback(() => {
+    if (!applicationId) return;
+
+    const missingMandatory = mandatoryDocs.filter((doc) => {
+      const state = documentStates[doc.id];
+      return !state || !hasUploadedFiles(state);
+    });
+
+    if (missingMandatory.length > 0) {
+      const missingNames = missingMandatory.map((doc) => doc.name).join(", ");
+      toast.error(`Please upload all required documents: ${missingNames}`, {
+        duration: 5000,
+      });
+      return;
+    }
+
+    // Save form data using persistence hook
+    const formData = convertToFormData(documentStates);
+    saveOnSubmit(formData);
+    
+    markStepCompleted(STEP_ID);
+    goToNext();
+  }, [
+    applicationId,
+    mandatoryDocs,
+    documentStates,
+    saveOnSubmit,
+    markStepCompleted,
+    goToNext,
+  ]);
 
   return (
     <FormProvider {...methods}>
@@ -230,43 +391,53 @@ export default function DocumentsUploadForm() {
               uploaded: false,
             };
 
+            const hasFiles = state.files.length > 0;
+            const hasPersistedFiles = (state.uploadedFiles?.length || 0) > 0;
+            const allCurrentUploaded = hasFiles && state.files.every((f) => f.uploaded);
+            const isUploading = state.files.some((f) => f.uploading);
+            const hasAnyUploaded = hasPersistedFiles || allCurrentUploaded;
+
             return (
               <Card key={docType.id}>
                 <CardContent className="pt-6">
                   <div className="space-y-4">
+                    {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h4 className="font-medium">{docType.name}</h4>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge
-                            variant={docType.is_mandatory ? "destructive" : "secondary"}
+                            variant={
+                              docType.is_mandatory ? "destructive" : "secondary"
+                            }
                             className="text-xs"
                           >
                             {docType.is_mandatory ? "Required" : "Optional"}
                           </Badge>
-                          {docType.accepts_ocr && (
-                            <Badge variant="outline" className="text-xs">
-                              OCR Enabled
-                            </Badge>
-                          )}
-                          {state.files.length > 0 && (
-                            <Badge variant="default" className="text-xs">
-                              {state.files.length} File
-                              {state.files.length > 1 ? "s" : ""} Uploaded
-                            </Badge>
-                          )}
                         </div>
                       </div>
-                      {state.files.length > 0 && (
+                      {hasPersistedFiles && !isUploading && (
+                        <div className="relative">
+                          <FileCheck2 className="h-5 w-5 text-green-600" />
+                          <CheckCircle2 className="h-3 w-3 text-green-500 absolute -bottom-0.5 -right-0.5 bg-white rounded-full" />
+                        </div>
+                      )}
+                      {!hasPersistedFiles && allCurrentUploaded && (
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      )}
+                      {isUploading && (
+                        <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
                       )}
                     </div>
 
+                    {/* Upload Area */}
                     <div
                       className={cn(
                         "border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer",
-                        docType.is_mandatory && state.files.length === 0
+                        docType.is_mandatory && !hasAnyUploaded && !hasFiles
                           ? "border-destructive/40"
+                          : hasPersistedFiles
+                          ? "border-green-500/40 bg-green-50/50"
                           : "border-muted"
                       )}
                     >
@@ -279,47 +450,139 @@ export default function DocumentsUploadForm() {
                           handleFileSelect(docType.id, e.target.files)
                         }
                         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        disabled={uploadDocument.isPending || !applicationId}
+                        disabled={isAnyFileUploading || !applicationId}
                       />
                       <label
                         htmlFor={`file-${docType.id}`}
                         className="cursor-pointer"
                       >
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">
-                          Drop files here to upload or click to browse
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Supported: PDF, JPG, PNG, DOC, DOCX
-                        </p>
+                        {hasPersistedFiles && !hasFiles ? (
+                          <>
+                            <FileCheck2 className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                            <p className="text-sm font-medium text-green-700">
+                              {state.uploadedFiles.length} File{state.uploadedFiles.length > 1 ? "s" : ""} uploaded
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Click to upload additional files
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">
+                              Drop files here to upload or click to browse
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Supported: PDF, JPG, PNG, DOC, DOCX
+                            </p>
+                          </>
+                        )}
                       </label>
                     </div>
 
-                    {state.files.length > 0 && (
+                    {/* File List */}
+                    {(hasFiles || hasPersistedFiles) && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Uploaded Files:</p>
-                        {state.files.map((file, index) => (
+                        <p className="text-sm font-medium">Files:</p>
+                        
+                        {/* Show persisted uploaded files first */}
+                        {hasPersistedFiles && (
+                          <>
+                            {state.uploadedFiles.map((uploadedFile, index) => (
+                              <div
+                                key={`persisted-${index}`}
+                                className="flex items-center justify-between p-3 border border-green-500/30 rounded-lg bg-green-50/50"
+                              >
+                                <div className="flex items-center gap-2 flex-1">
+                                  <div className="relative">
+                                    <FileCheck2 className="h-4 w-4 text-green-600 shrink-0" />
+                                    <CheckCircle2 className="h-2.5 w-2.5 text-green-500 absolute -bottom-0.5 -right-0.5 bg-white rounded-full" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-sm truncate block text-green-700 font-medium">
+                                      {uploadedFile.fileName}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      ({(uploadedFile.fileSize / 1024).toFixed(2)} KB) • Uploaded
+                                    </span>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleRemovePersistedFile(
+                                      docType.id,
+                                      uploadedFile.fileName,
+                                      uploadedFile.fileSize
+                                    )
+                                  }
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </>
+                        )}
+
+                        {/* Show current files being uploaded */}
+                        {hasFiles && (
+                          <>
+                            {state.files
+                              .filter((f) => !state.uploadedFiles.some(
+                                (uf) => uf.fileName === f.file.name && uf.fileSize === f.file.size
+                              ))
+                              .map((fileState, index) => (
                           <div
-                            key={index}
-                            className="flex items-center justify-between p-3 border rounded-lg"
+                            key={`current-${index}-${fileState.file.name}`}
+                            className={cn(
+                              "flex items-center justify-between p-3 border rounded-lg",
+                              fileState.uploaded && "border-green-500/30 bg-green-50/50",
+                              fileState.error &&
+                                "border-destructive/50 bg-destructive/5"
+                            )}
                           >
                             <div className="flex items-center gap-2 flex-1">
-                              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <span className="text-sm truncate">{file.name}</span>
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                ({(file.size / 1024).toFixed(2)} KB)
-                              </span>
+                              {fileState.uploading ? (
+                                <Loader2 className="h-4 w-4 text-blue-500 animate-spin shrink-0" />
+                              ) : fileState.uploaded ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                              ) : (
+                                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <span className={cn(
+                                  "text-sm truncate block",
+                                  fileState.uploaded && "text-green-700 font-medium"
+                                )}>
+                                  {fileState.file.name}
+                                </span>
+                                {fileState.error && (
+                                  <span className="text-xs text-destructive block mt-0.5">
+                                    {fileState.error}
+                                  </span>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  ({(fileState.file.size / 1024).toFixed(2)} KB)
+                                  {fileState.uploaded && " • Uploaded"}
+                                </span>
+                              </div>
                             </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleFileRemove(docType.id, index)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
+                            {!fileState.uploading && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleFileRemove(docType.id, index)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         ))}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
@@ -329,53 +592,16 @@ export default function DocumentsUploadForm() {
           })}
         </div>
 
-        {!allMandatoryUploaded && (
-          <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-            <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-destructive">
-                Required Documents Missing
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Please upload all required documents before continuing to the next step.
-              </p>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                {mandatoryDocs.map((doc) => {
-                  const state = documentStates[doc.id];
-                  const isUploaded = state && state.files.length > 0;
-                  return (
-                    <li
-                      key={doc.id}
-                      className={cn(
-                        "flex items-center gap-2",
-                        isUploaded && "text-green-600"
-                      )}
-                    >
-                      {isUploaded ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-destructive" />
-                      )}
-                      {doc.name}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        )}
+    
 
+        {/* Continue Button */}
         <ApplicationStepHeader className="mt-4">
           <Button
             type="button"
             onClick={handleContinue}
-            disabled={
-              uploadDocument.isPending ||
-              !applicationId ||
-              !allMandatoryUploaded
-            }
+            disabled={isAnyFileUploading || !applicationId || !allMandatoryUploaded}
           >
-            {uploadDocument.isPending
+            {isAnyFileUploading
               ? "Uploading..."
               : allMandatoryUploaded
               ? "Save & Continue"
@@ -386,4 +612,3 @@ export default function DocumentsUploadForm() {
     </FormProvider>
   );
 }
-
