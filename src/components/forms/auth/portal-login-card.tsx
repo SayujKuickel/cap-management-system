@@ -19,7 +19,7 @@ const PortalLoginCard = () => {
   const [activeTab, setActiveTab] = useState<PortalTab>("agent");
 
   return (
-    <Card>
+    <Card className="p-0">
       <CardHeader>
         <CardTitle>Sign In</CardTitle>
         <CardDescription>

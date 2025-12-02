@@ -6,6 +6,16 @@ const apiProxyTarget =
 const nextConfig: NextConfig = {
   reactCompiler: true,
   reactStrictMode: true,
+
+  redirects: async () => {
+    return [
+      {
+        source: "/",
+        destination: "/dashboard",
+        permanent: false,
+      },
+    ];
+  },
   async rewrites() {
     if (!apiProxyTarget) return [];
     return [

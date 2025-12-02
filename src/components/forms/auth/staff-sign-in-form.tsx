@@ -1,5 +1,6 @@
 import PortalCredentialsForm from "./portal-credentials-form";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 const StaffSignInForm = () => {
   return (
@@ -11,7 +12,7 @@ const StaffSignInForm = () => {
     >
       <div className="space-y-3 border-t border-border pt-4">
         <Button type="button" variant="outline" className="w-full">
-          Sign in with Microsoft (MSAL)
+          <Image src="/images/microsoft.svg" alt="Microsoft" width={20} height={20} /> Sign in with Microsoft (MSAL)
         </Button>
       </div>
     </PortalCredentialsForm>

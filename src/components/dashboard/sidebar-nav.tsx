@@ -6,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Image from "next/image";
 import {
   Sidebar,
   SidebarContent,
@@ -65,10 +66,10 @@ const SidebarNav = ({ items, user }: SidebarNavProps) => {
     user.role === "staff"
       ? "Staff Portal"
       : user.role === "agent"
-        ? "Agent Portal"
-        : user.role === "student"
-          ? "Student Portal"
-          : "Admin Portal";
+      ? "Agent Portal"
+      : user.role === "student"
+      ? "Student Portal"
+      : "Admin Portal";
   const roleText = user.role.charAt(0).toUpperCase() + user.role.slice(1);
   const initials =
     user.name?.[0]?.toUpperCase() ?? user.email[0]?.toUpperCase() ?? "?";
@@ -82,19 +83,22 @@ const SidebarNav = ({ items, user }: SidebarNavProps) => {
   return (
     <Sidebar collapsible="offcanvas" variant="sidebar">
       <SidebarHeader className="p-3">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8  items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-            C
+        <Link
+          href={siteRoutes.dashboard.root}
+          onClick={handleNavigate}
+          className=" flex items-start justify-start transition-opacity hover:opacity-80"
+        >
+          <div className="relative w-44 h-full">
+            <Image
+              src="/images/logo.svg"
+              alt="Churchill Institute of Higher Education"
+              width={48}
+              height={48}
+              className="object-contain w-full h-full"
+              priority
+            />
           </div>
-          <div className="space-y-0.5 group-data-[collapsible=icon]:hidden">
-            <p className="text-sm font-semibold text-foreground">
-              Churchill University
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {roleLabel} · {roleText}
-            </p>
-          </div>
-        </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
