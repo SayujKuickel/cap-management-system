@@ -3,11 +3,11 @@
 import React, { createContext, useContext, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useApplicationStepStore } from "@/store/useApplicationStep.store";
+import { useApplicationFormDataStore } from "@/store/useApplicationFormData.store";
 import {
   useApplicationCreateMutation,
   useApplicationGetMutation,
 } from "@/hooks/useApplication.hook";
-import { usePersistence } from "@/hooks/usePersistance.hook";
 
 type ApplicationFormContextType = {
   applicationId: string | null;
@@ -53,36 +53,69 @@ export const ApplicationFormProvider: React.FC<{
   const isStepCompleted = useApplicationStepStore(
     (state) => state.isStepCompleted
   );
-  const initializeFromStorage = useApplicationStepStore(
-    (state) => state.initializeFromStorage
+  const initializeStep = useApplicationStepStore(
+    (state) => state.initializeStep
   );
+
+  // Zustand store for form data
+  const setStepData = useApplicationFormDataStore((state) => state.setStepData);
+  const getStepData = useApplicationFormDataStore((state) => state.getStepData);
 
   // API hooks
   const createApplication = useApplicationCreateMutation();
   const { mutate: fetchApplication, isPending: isFetchingApplication } =
     useApplicationGetMutation(applicationId);
 
-  // Persistence
-  const { saveStepData, getStepData } = usePersistence(applicationId);
-
   // Initialize application
   useEffect(() => {
     if (!applicationId) {
+      // For new applications, always start at step 1 and clear any existing data
+      goToStep(1);
       createApplication.mutate({
         agent_profile_id: "ea7cab76-0e47-4de8-b923-834f0d53abf1",
         course_offering_id: "4ba78380-8158-4941-9420-a1495d88e9d6",
       });
     } else {
-      initializeFromStorage(applicationId);
+      // Set application ID in store
+      const store = useApplicationFormDataStore.getState();
+      const currentStoreAppId = store.applicationId;
+      
+      // If this is a different application, clear the data and start fresh
+      if (currentStoreAppId && currentStoreAppId !== applicationId) {
+        store.clearAllData();
+        goToStep(1);
+      }
+      
+      store.setApplicationId(applicationId);
+      
+      // Check if there's any step data - if not, it's a new application
+      const stepData = store.stepData;
+      const hasAnyData = Object.keys(stepData).length > 0;
+      
+      if (!hasAnyData) {
+        // New application with no data - start at step 1
+        goToStep(1);
+      } else {
+        // Existing application with data - initialize based on progress
+        initializeStep(applicationId);
+      }
+      
       fetchApplication();
     }
-  }, [applicationId]);
+  }, [applicationId, initializeStep, goToStep]);
 
-  // Wrap getStepData to convert null to undefined
+  // Wrap setStepData to match expected signature
+  const saveStepDataWrapper = useCallback(
+    <T,>(stepId: number, data: T) => {
+      setStepData(stepId, data);
+    },
+    [setStepData]
+  );
+
+  // Wrap getStepData to match expected signature
   const getStepDataWrapper = useCallback(
     <T,>(stepId: number): T | undefined => {
-      const data = getStepData<T>(stepId);
-      return data ?? undefined;
+      return getStepData<T>(stepId);
     },
     [getStepData]
   );
@@ -95,7 +128,7 @@ export const ApplicationFormProvider: React.FC<{
     goToStep,
     goToNext,
     goToPrevious,
-    saveStepData: useCallback(saveStepData, [applicationId]),
+    saveStepData: saveStepDataWrapper,
     getStepData: getStepDataWrapper,
     isLoading: createApplication.isPending || isFetchingApplication,
   };

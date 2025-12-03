@@ -38,7 +38,7 @@ export default function USIForm() {
   const { handleSubmit } = methods;
 
   const onSubmit = (values: USIValues) => {
-    // Save to localStorage before submitting to API
+    // Save to Zustand store before submitting to API
     if (applicationId) {
       saveOnSubmit(values);
     }

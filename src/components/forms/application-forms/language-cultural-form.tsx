@@ -34,7 +34,7 @@ export default function LanguageDefaultForm() {
   });
 
   const onSubmit = (values: LanguageAndCultureFormValues) => {
-    // Save to localStorage before submitting to API
+    // Save to Zustand store before submitting to API
     if (applicationId) {
       saveOnSubmit(values);
     }

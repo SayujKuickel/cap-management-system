@@ -3,10 +3,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useDocuments, useDocumentTypesQuery } from "@/hooks/document.hook";
+import { useDocuments, useDocumentTypesQuery, useDocumentOcrQuery } from "@/hooks/document.hook";
 import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 import { cn } from "@/lib/utils";
 import { useApplicationStepStore } from "@/store/useApplicationStep.store";
+import { useApplicationFormDataStore } from "@/store/useApplicationFormData.store";
 import {
   CheckCircle2,
   FileCheck2,
@@ -16,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import ApplicationStepHeader from "./application-step-header";
@@ -134,6 +135,9 @@ export default function DocumentsUploadForm() {
     isLoading: isLoadingDocumentTypes,
     error: documentTypesError,
   } = useDocumentTypesQuery();
+  
+  // Poll for OCR results - this will automatically populate the store when data is available
+  useDocumentOcrQuery(applicationId);
 
   const goToNext = useApplicationStepStore((state) => state.goToNext);
   const markStepCompleted = useApplicationStepStore(
@@ -161,10 +165,14 @@ export default function DocumentsUploadForm() {
     Record<string, DocumentState>
   >({});
   const [uploadingFiles, setUploadingFiles] = useState<Set<string>>(new Set());
+  const shouldSaveRef = useRef(false);
 
   const methods = useForm<DocumentsFormData>({
     defaultValues: { documents: {} },
   });
+
+  // Get persisted data from store
+  const getStepData = useApplicationFormDataStore((state) => state.getStepData);
 
   // Use form persistence hook
   const { saveOnSubmit } = useFormPersistence<DocumentsFormData>({
@@ -181,6 +189,14 @@ export default function DocumentsUploadForm() {
             if (updated[key]) {
               updated[key] = {
                 ...updated[key],
+                uploadedFiles: persisted.uploadedFiles || [],
+                uploaded: persisted.uploaded || false,
+              };
+            } else {
+              // If state doesn't exist yet, create it with persisted data
+              updated[key] = {
+                documentTypeId: key,
+                files: [],
                 uploadedFiles: persisted.uploadedFiles || [],
                 uploaded: persisted.uploaded || false,
               };
@@ -204,25 +220,49 @@ export default function DocumentsUploadForm() {
 
   const isAnyFileUploading = uploadingFiles.size > 0;
 
-  // Initialize document states when document types are loaded
+  // Initialize document states when document types are loaded and restore persisted data
   useEffect(() => {
-    if (sortedDocumentTypes.length > 0) {
+    if (sortedDocumentTypes.length > 0 && applicationId) {
       setDocumentStates((prev) => {
-        // Only initialize if not already initialized or if document types changed
+        // Only initialize if not already initialized
         if (Object.keys(prev).length === 0) {
-          return createInitialState(sortedDocumentTypes);
+          const initialState = createInitialState(sortedDocumentTypes);
+          
+          // Try to restore persisted data
+          const persistedData = getStepData<DocumentsFormData>(STEP_ID);
+          if (persistedData?.documents) {
+            // Merge persisted data with initial state
+            Object.keys(persistedData.documents).forEach((key) => {
+              const persisted = persistedData.documents[key];
+              if (initialState[key]) {
+                initialState[key] = {
+                  ...initialState[key],
+                  uploadedFiles: persisted.uploadedFiles || [],
+                  uploaded: persisted.uploaded || false,
+                };
+              }
+            });
+          }
+          
+          return initialState;
         }
         return prev;
       });
     }
-  }, [documentTypesKey]); // Use stable key instead of array reference
+  }, [documentTypesKey, applicationId, getStepData]); // Use stable key instead of array reference
 
-  // Auto-save form data
+  // Auto-save form data to Zustand store
   useEffect(() => {
     if (!applicationId || sortedDocumentTypes.length === 0) return;
 
     const formData = convertToFormData(documentStates);
     methods.setValue("documents", formData.documents);
+    
+    // Save to Zustand store if flag is set (for immediate saves after upload/remove)
+    if (shouldSaveRef.current) {
+      saveOnSubmit(formData);
+      shouldSaveRef.current = false;
+    }
 
     if (isAllMandatoryUploaded(documentStates, sortedDocumentTypes)) {
       markStepCompleted(STEP_ID);
@@ -233,6 +273,7 @@ export default function DocumentsUploadForm() {
     methods,
     markStepCompleted,
     sortedDocumentTypes,
+    saveOnSubmit,
   ]);
 
   // Handle file upload
@@ -257,6 +298,17 @@ export default function DocumentsUploadForm() {
           const currentFiles = prev[documentTypeId]?.files || [];
           const existingUploaded = prev[documentTypeId]?.uploadedFiles || [];
 
+          const newUploadedFile = {
+            fileName: file.name,
+            fileSize: file.size,
+            uploadedAt: new Date().toISOString(),
+          };
+
+          // Check if file already exists to avoid duplicates
+          const fileExists = existingUploaded.some(
+            (f) => f.fileName === file.name && f.fileSize === file.size
+          );
+
           return {
             ...prev,
             [documentTypeId]: {
@@ -264,19 +316,19 @@ export default function DocumentsUploadForm() {
               files: currentFiles.map((f) =>
                 f.file === file ? { ...f, uploading: false, uploaded: true } : f
               ),
-              // Add to uploadedFiles when upload succeeds
-              uploadedFiles: [
-                ...existingUploaded,
-                {
-                  fileName: file.name,
-                  fileSize: file.size,
-                  uploadedAt: new Date().toISOString(),
-                },
-              ],
+              // Add to uploadedFiles when upload succeeds (avoid duplicates)
+              uploadedFiles: fileExists
+                ? existingUploaded
+                : [...existingUploaded, newUploadedFile],
               uploaded: true,
             },
           };
         });
+
+   
+
+        // Mark that we need to save on next useEffect run
+        shouldSaveRef.current = true;
       } catch (error) {
         console.error("Upload failed:", error);
         setDocumentStates((prev) => {
@@ -377,6 +429,9 @@ export default function DocumentsUploadForm() {
           },
         };
       });
+      
+      // Mark that we need to save on next useEffect run
+      shouldSaveRef.current = true;
     },
     []
   );
@@ -396,6 +451,9 @@ export default function DocumentsUploadForm() {
           },
         };
       });
+      
+      // Mark that we need to save on next useEffect run
+      shouldSaveRef.current = true;
     },
     []
   );
@@ -475,6 +533,7 @@ export default function DocumentsUploadForm() {
             const state = documentStates[docType.id] || {
               documentTypeId: docType.id,
               files: [],
+              uploadedFiles: [],
               uploaded: false,
             };
 
@@ -510,16 +569,23 @@ export default function DocumentsUploadForm() {
                         </div>
                       </div>
                       {hasPersistedFiles && !isUploading && (
-                        <div className="relative">
+                        <div className="relative" title={`${state.uploadedFiles.length} file(s) uploaded`}>
                           <FileCheck2 className="h-5 w-5 text-green-600" />
                           <CheckCircle2 className="h-3 w-3 text-green-500 absolute -bottom-0.5 -right-0.5 bg-white rounded-full" />
                         </div>
                       )}
-                      {!hasPersistedFiles && allCurrentUploaded && (
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      {!hasPersistedFiles && allCurrentUploaded && !isUploading && (
+                        <div title="Uploaded successfully">
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        </div>
                       )}
                       {isUploading && (
-                        <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                        <div title="Uploading...">
+                          <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                        </div>
+                      )}
+                      {!hasPersistedFiles && !allCurrentUploaded && !isUploading && hasFiles && (
+                        <FileText className="h-5 w-5 text-muted-foreground" />
                       )}
                     </div>
 

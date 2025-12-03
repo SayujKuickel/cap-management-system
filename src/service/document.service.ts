@@ -16,6 +16,39 @@ export interface DocumentType {
   display_order: number;
 }
 
+export interface OcrSectionData {
+  source_document_id: string;
+  document_type: string;
+  document_name: string;
+  extracted_data: Record<string, unknown>;
+  confidence_scores: Record<string, number>;
+}
+
+export interface OcrResult {
+  application_id: string;
+  sections: {
+    personal_details?: OcrSectionData;
+    language_cultural?: OcrSectionData;
+    emergency_contacts?: OcrSectionData;
+    health_cover?: OcrSectionData;
+    disability_support?: OcrSectionData;
+    schooling_history?: OcrSectionData[];
+    qualifications?: OcrSectionData[];
+    employment_history?: OcrSectionData[];
+    usi?: OcrSectionData;
+    additional_services?: OcrSectionData;
+    survey_responses?: OcrSectionData;
+    [key: string]: OcrSectionData | OcrSectionData[] | undefined;
+  };
+  metadata: {
+    total_documents: number;
+    ocr_completed: number;
+    ocr_pending: number;
+    ocr_failed: number;
+    [key: string]: boolean | number;
+  };
+}
+
 class DocumentService extends ApiService {
   private readonly basePath = "documents";
 
@@ -57,6 +90,18 @@ class DocumentService extends ApiService {
       () => this.get(`${this.basePath}/types`, true),
       "Document types fetched successfully.",
       "Failed to fetch document types"
+    );
+  }
+
+  getOcrResults(applicationId: string): Promise<ServiceResponse<OcrResult>> {
+    return resolveServiceCall<OcrResult>(
+      () =>
+        this.get(
+          `${this.basePath}/application/${applicationId}/extracted-data`,
+          true
+        ),
+      "Extracted data fetched successfully.",
+      "Failed to fetch extracted data"
     );
   }
 }

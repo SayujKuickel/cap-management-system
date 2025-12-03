@@ -16,14 +16,14 @@ import {
   type HealthCoverValues,
 } from "@/validation/application/health-cover";
 import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
-import { usePersistence } from "@/hooks/usePersistance.hook";
+import { useApplicationFormDataStore } from "@/store/useApplicationFormData.store";
 
 export default function HealthCoverForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
   const stepId = 4; // Health Cover is step 4
   const healthCoverMutation = useApplicationStepMutations(applicationId)[stepId];
-  const { getStepData } = usePersistence(applicationId);
+  const getStepData = useApplicationFormDataStore((state) => state.getStepData);
 
   // Load persisted data and merge with defaults BEFORE creating form
   const initialValues = useMemo(() => {
@@ -68,7 +68,7 @@ export default function HealthCoverForm() {
       <form
         className="space-y-6"
         onSubmit={handleSubmit((values) => {
-          // Save to localStorage before submitting to API
+          // Save to Zustand store before submitting to API
           if (applicationId) {
             saveOnSubmit(values);
           }

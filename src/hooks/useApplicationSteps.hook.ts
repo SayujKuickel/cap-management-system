@@ -22,7 +22,7 @@ import {
 import type { ServiceResponse } from "@/types/service";
 import type { StepUpdateResponse } from "@/service/application-steps.service";
 import { toast } from "react-hot-toast";
-import { usePersistence } from "@/hooks/usePersistance.hook";
+import { useApplicationFormDataStore } from "@/store/useApplicationFormData.store";
 
 type StepMutationFn<TInput> = (
   applicationId: string,
@@ -40,7 +40,7 @@ const useStepMutation = <TInput>(
     (state) => state.markStepCompleted
   );
   const goToNext = useApplicationStepStore((state) => state.goToNext);
-  const { saveStepData } = usePersistence(applicationId);
+  const setStepData = useApplicationFormDataStore((state) => state.setStepData);
 
   return useMutation<ServiceResponse<StepUpdateResponse>, Error, TInput>({
     mutationKey: ["application-step", stepId, applicationId],
@@ -65,9 +65,9 @@ const useStepMutation = <TInput>(
         payload,
       });
       
-      // Save to localStorage after successful API save
+      // Save to Zustand store after successful API save
       if (applicationId) {
-        saveStepData(stepId, payload);
+        setStepData(stepId, payload);
       }
       
       markStepCompleted(stepId);

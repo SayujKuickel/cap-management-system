@@ -61,7 +61,7 @@ export function FormStepWrapper<T extends FieldValues>({
     }
   }, [applicationId, stepId]);
 
-  // Auto-save to localStorage (debounced)
+  // Auto-save to Zustand store (debounced)
   useEffect(() => {
     if (!applicationId) return;
 
@@ -79,7 +79,7 @@ export function FormStepWrapper<T extends FieldValues>({
   const handleFormSubmit = async (data: T) => {
     if (!applicationId) return;
 
-    // Save to localStorage
+    // Save to Zustand store
     saveStepData(stepId, data);
 
     // Custom submit handler

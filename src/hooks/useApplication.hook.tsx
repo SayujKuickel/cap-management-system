@@ -13,7 +13,8 @@ import type {
 import type { ServiceResponse } from "@/types/service";
 import type { Application } from "@/constants/types";
 import { siteRoutes } from "@/constants/site-routes";
-import { usePersistence } from "./usePersistance.hook";
+import { useApplicationFormDataStore } from "@/store/useApplicationFormData.store";
+import { useApplicationStepStore } from "@/store/useApplicationStep.store";
 
 // --- Queries ---
 
@@ -49,7 +50,7 @@ export const useApplicationGetQuery = (applicationId: string | null) => {
 
 export const useApplicationSubmitMutation = (applicationId: string | null) => {
   const router = useRouter();
-  const { clearPersistedData } = usePersistence(applicationId);
+  const clearAllData = useApplicationFormDataStore((state) => state.clearAllData);
   const queryClient = useQueryClient();
 
   return useMutation<ApplicationDetailResponse, Error, void>({
@@ -73,8 +74,8 @@ export const useApplicationSubmitMutation = (applicationId: string | null) => {
         response: data,
       });
 
-      // Clear persisted data after successful submission
-      clearPersistedData();
+      // Clear all form data after successful submission
+      clearAllData();
 
       // Invalidate list and detail queries
       queryClient.invalidateQueries({ queryKey: ["application-list"] });
@@ -91,8 +92,10 @@ export const useApplicationSubmitMutation = (applicationId: string | null) => {
 };
 
 export const useApplicationGetMutation = (applicationId: string | null) => {
-  const { populateFromApiResponse, clearPersistedData } =
-    usePersistence(applicationId);
+  const populateFromApiResponse = useApplicationFormDataStore(
+    (state) => state.populateFromApiResponse
+  );
+  const clearAllData = useApplicationFormDataStore((state) => state.clearAllData);
 
   return useMutation<ServiceResponse<ApplicationDetailResponse>, Error, void>({
     mutationKey: ["application-get", applicationId],
@@ -112,8 +115,13 @@ export const useApplicationGetMutation = (applicationId: string | null) => {
         response,
       });
 
-      // Clear any existing localStorage data first (API is source of truth)
-      clearPersistedData();
+      // Clear any existing form data first (API is source of truth)
+      clearAllData();
+
+      // Set application ID in store
+      if (applicationId) {
+        useApplicationFormDataStore.getState().setApplicationId(applicationId);
+      }
 
       // Populate form data from API response
       if (response?.data) {
@@ -166,6 +174,8 @@ export const useApplicationCreateMutation = () => {
           "",
           `${window.location.pathname}?${params.toString()}`
         );
+        // Ensure new application starts at step 1
+        useApplicationStepStore.getState().goToStep(1);
       } else if (!applicationId) {
         console.warn(
           "[Application] createApplication response missing id",

@@ -47,7 +47,7 @@ export default function EmploymentForm() {
   const canAddMore = fields.length < 10;
 
   const onSubmit = (values: EmploymentFormValues) => {
-    // Save to localStorage before submitting to API
+    // Save to Zustand store before submitting to API
     if (applicationId) {
       saveOnSubmit(values);
     }

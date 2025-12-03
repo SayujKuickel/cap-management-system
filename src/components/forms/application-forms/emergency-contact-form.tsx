@@ -57,7 +57,7 @@ export default function EmergencyContactForm() {
       <form
         className="space-y-6"
         onSubmit={handleSubmit((values) => {
-          // Save to localStorage before submitting to API
+          // Save to Zustand store before submitting to API
           if (applicationId) {
             saveOnSubmit(values);
           }

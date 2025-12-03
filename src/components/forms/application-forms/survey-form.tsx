@@ -48,7 +48,7 @@ export default function SurveyForm() {
   const canAddMore = fields.length < 10;
 
   const onSubmit = (values: SurveyValues) => {
-    // Save to localStorage before submitting to API
+    // Save to Zustand store before submitting to API
     if (applicationId) {
       saveOnSubmit(values);
     }

@@ -67,7 +67,7 @@ export default function DisabilityForm() {
   }, [hasDocumentation, form]);
 
   const onSubmit = (values: DisabilityFormValues) => {
-    // Save to localStorage before submitting to API
+    // Save to Zustand store before submitting to API
     if (applicationId) {
       saveOnSubmit(values);
     }

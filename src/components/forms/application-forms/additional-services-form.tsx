@@ -56,7 +56,7 @@ export default function AdditionalServicesForm() {
   const canAddMore = fields.length < 10; // tweak if you want
 
   const onSubmit = (values: AdditionalServicesValues) => {
-    // Save to localStorage before submitting to API
+    // Save to Zustand store before submitting to API
     if (applicationId) {
       saveOnSubmit(values);
     }
