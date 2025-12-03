@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 
 import SidebarNav, {
@@ -11,7 +10,6 @@ import type { UserRole } from "@/lib/auth";
 import { authOptions } from "@/lib/auth-options";
 import { siteRoutes } from "@/constants/site-routes";
 import NAV_LINKS from "@/data/navlink.data";
- 
 
 const getDisplayName = (email: string) => email.split("@")[0] ?? email;
 
@@ -19,10 +17,14 @@ const DashboardLayout = async ({ children }: { children: ReactNode }) => {
   const session = await getServerSession(authOptions);
   const role = (session?.user?.role as UserRole | undefined) ?? "admin";
 
-  if (!session?.user?.email || !role) redirect(siteRoutes.auth.login);
-  if (role === "student") redirect(siteRoutes.auth.login);
+  // Route protection is handled by middleware/proxy.ts
+  // No need to check here as proxy will redirect unauthorized access
 
   const navItems = NAV_LINKS[role] ?? NAV_LINKS.admin;
+
+  if (!session?.user?.email) {
+    return null;
+  }
 
   return (
     <SidebarProvider>

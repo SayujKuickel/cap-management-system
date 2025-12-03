@@ -4,16 +4,29 @@ import { getToken } from "next-auth/jwt";
 import { AUTH_SECRET } from "@/lib/auth-options";
 import { siteRoutes } from "@/constants/site-routes";
 
+// Agent can only access these routes
 const DASHBOARD_AGENT_PATHS = [
   siteRoutes.dashboard.root,
   siteRoutes.dashboard.application.root,
   siteRoutes.dashboard.application.new,
 ];
 
+// Staff can only access these routes (NOT agent routes)
 const DASHBOARD_STAFF_PATHS = [
   siteRoutes.dashboard.root,
   siteRoutes.dashboard.agents.root,
   siteRoutes.dashboard.applicationQueue.root,
+];
+
+// Routes that are restricted to specific roles
+const STAFF_ONLY_ROUTES = [
+  siteRoutes.dashboard.agents.root,
+  siteRoutes.dashboard.applicationQueue.root,
+];
+
+const AGENT_ONLY_ROUTES = [
+  siteRoutes.dashboard.application.root,
+  siteRoutes.dashboard.application.new,
 ];
 
 const AUTH_PAGES = [
@@ -31,17 +44,38 @@ const isProtectedPath = (pathname: string) =>
 
 const isAllowedPath = (pathname: string, role: string) => {
   const normalized = normalizePath(pathname);
+  
+  // Admin can access everything
   if (role === "admin") return true;
+  
+  // Agent restrictions: Cannot access staff routes
   if (role === "agent") {
+    // Check if trying to access staff-only routes
+    const isStaffRoute = STAFF_ONLY_ROUTES.some(
+      (route) => normalized === route || normalized.startsWith(`${route}/`)
+    );
+    if (isStaffRoute) return false;
+    
+    // Only allow agent routes
     return DASHBOARD_AGENT_PATHS.some(
       (p) => normalized === p || normalized.startsWith(`${p}/`)
     );
   }
+  
+  // Staff restrictions: Cannot access agent routes
   if (role === "staff") {
+    // Check if trying to access agent-only routes
+    const isAgentRoute = AGENT_ONLY_ROUTES.some(
+      (route) => normalized === route || normalized.startsWith(`${route}/`)
+    );
+    if (isAgentRoute) return false;
+    
+    // Only allow staff routes
     return DASHBOARD_STAFF_PATHS.some(
       (p) => normalized === p || normalized.startsWith(`${p}/`)
     );
   }
+  
   return false;
 };
 
