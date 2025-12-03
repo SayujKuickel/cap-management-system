@@ -14,8 +14,8 @@ import Image from "next/image";
 
 const LoginPage = () => {
   return (
-    <main className="flex min-h-screen items-center justify-center  ">
-      <div className="w-full max-w-md space-y-6">
+    <main className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-lg space-y-6 px-4">
         <div className="space-y-2 text-center">
           <div className="relative    w-52 mx-auto flex items-center justify-center">
             <Image

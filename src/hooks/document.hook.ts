@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
-import documentService from "@/service/document.service";
+import documentService, { type DocumentType } from "@/service/document.service";
 import type { ServiceResponse } from "@/types/service";
 import type { QueryValue } from "@/service/service-helpers";
 
@@ -16,6 +16,21 @@ type UploadDocumentParams = {
 type VerifyDocumentParams = Record<string, unknown>;
 
 type ListApplicationDocumentsParams = Record<string, QueryValue>;
+
+// Query hooks
+export const useDocumentTypesQuery = () => {
+  return useQuery<ServiceResponse<DocumentType[]>, Error>({
+    queryKey: ["document-types"],
+    queryFn: async () => {
+      const response = await documentService.getDocumentTypes();
+      if (!response.success) {
+        throw new Error(response.message || "Failed to fetch document types");
+      }
+      return response;
+    },
+    staleTime: 1000 * 60 * 30, // 30 minutes - document types rarely change
+  });
+};
 
 // Mutation hooks
 export const useUploadDocument = () => {

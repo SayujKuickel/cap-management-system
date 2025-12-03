@@ -22,7 +22,7 @@ import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useStaffMetrics, useAllStaffMetrics } from "@/hooks/useStaffMetrics.hook";
+import { useStaffMetricsQuery, useOrganizationMetricsQuery } from "@/hooks/useStaff.hook";
 import useApplications from "@/hooks/useApplications.hook";
 import { siteRoutes } from "@/constants/site-routes";
 import { ApplicationStatus } from "@/constants/types";
@@ -49,8 +49,8 @@ export default function Dashboard() {
   // Use organization-wide metrics for admin/staff, staff-specific for others
   const useOrgMetrics = role === "admin" || role === "staff";
   const staffMetricsQuery = useOrgMetrics 
-    ? useAllStaffMetrics({ refetchInterval: 60000 })
-    : useStaffMetrics({ refetchInterval: 60000 });
+    ? useOrganizationMetricsQuery()
+    : useStaffMetricsQuery();
   
   const { applications, isLoading: isLoadingApps } = useApplications({
     filters: {},

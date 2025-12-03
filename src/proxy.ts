@@ -6,7 +6,7 @@ import { siteRoutes } from "@/constants/site-routes";
 
 // Agent can only access these routes
 const DASHBOARD_AGENT_PATHS = [
-  siteRoutes.dashboard.root,
+  // siteRoutes.dashboard.root,
   siteRoutes.dashboard.application.root,
   siteRoutes.dashboard.application.new,
 ];

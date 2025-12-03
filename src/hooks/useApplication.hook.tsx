@@ -1,18 +1,56 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 import applicationService from "@/service/application.service";
 import type { ApplicationCreateValues } from "@/validation/application.validation";
-import type { ApplicationDetailResponse } from "@/service/application.service";
+import type {
+  ApplicationDetailResponse,
+  ApplicationListParams,
+  ApplicationResponse,
+} from "@/service/application.service";
 import type { ServiceResponse } from "@/types/service";
+import type { Application } from "@/constants/types";
 import { siteRoutes } from "@/constants/site-routes";
 import { usePersistence } from "./usePersistance.hook";
+
+// --- Queries ---
+
+export const useApplicationListQuery = (params: ApplicationListParams = {}) => {
+  return useQuery<ServiceResponse<Application[]>, Error>({
+    queryKey: ["application-list", params],
+    queryFn: async () => {
+      const response = await applicationService.listApplications(params);
+      if (!response.success) {
+        throw new Error(response.message);
+      }
+      return response;
+    },
+  });
+};
+
+export const useApplicationGetQuery = (applicationId: string | null) => {
+  return useQuery<ServiceResponse<ApplicationDetailResponse>, Error>({
+    queryKey: ["application-get", applicationId],
+    queryFn: async () => {
+      if (!applicationId) throw new Error("Missing application reference.");
+      const response = await applicationService.getApplication(applicationId);
+      if (!response.success) {
+        throw new Error(response.message);
+      }
+      return response;
+    },
+    enabled: !!applicationId,
+  });
+};
+
+// --- Mutations ---
 
 export const useApplicationSubmitMutation = (applicationId: string | null) => {
   const router = useRouter();
   const { clearPersistedData } = usePersistence(applicationId);
+  const queryClient = useQueryClient();
 
   return useMutation<ApplicationDetailResponse, Error, void>({
     mutationKey: ["application-submit", applicationId],
@@ -24,7 +62,8 @@ export const useApplicationSubmitMutation = (applicationId: string | null) => {
       );
 
       if (!response.success) throw new Error(response.message);
-      if (!response.data) throw new Error("Application data is missing from response.");
+      if (!response.data)
+        throw new Error("Application data is missing from response.");
 
       return response.data;
     },
@@ -33,11 +72,16 @@ export const useApplicationSubmitMutation = (applicationId: string | null) => {
         applicationId,
         response: data,
       });
-      
+
       // Clear persisted data after successful submission
-      // The API response contains all form data if needed for other purposes
       clearPersistedData();
-      
+
+      // Invalidate list and detail queries
+      queryClient.invalidateQueries({ queryKey: ["application-list"] });
+      queryClient.invalidateQueries({
+        queryKey: ["application-get", applicationId],
+      });
+
       router.push(siteRoutes.dashboard.application.root);
     },
     onError: (error) => {
@@ -47,7 +91,8 @@ export const useApplicationSubmitMutation = (applicationId: string | null) => {
 };
 
 export const useApplicationGetMutation = (applicationId: string | null) => {
-  const { populateFromApiResponse, clearPersistedData } = usePersistence(applicationId);
+  const { populateFromApiResponse, clearPersistedData } =
+    usePersistence(applicationId);
 
   return useMutation<ServiceResponse<ApplicationDetailResponse>, Error, void>({
     mutationKey: ["application-get", applicationId],
@@ -66,10 +111,10 @@ export const useApplicationGetMutation = (applicationId: string | null) => {
         applicationId,
         response,
       });
-      
+
       // Clear any existing localStorage data first (API is source of truth)
       clearPersistedData();
-      
+
       // Populate form data from API response
       if (response?.data) {
         populateFromApiResponse(response.data);
@@ -86,8 +131,10 @@ const DEFAULT_CREATE_PAYLOAD_temp = {
   course_offering_id: "4ba78380-8158-4941-9420-a1495d88e9d6",
 };
 
-export const useApplicationCreateMutation = () =>
-  useMutation({
+export const useApplicationCreateMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<ApplicationResponse, Error, ApplicationCreateValues>({
     mutationKey: ["application-create"],
     mutationFn: async (
       payload: ApplicationCreateValues = DEFAULT_CREATE_PAYLOAD_temp
@@ -95,6 +142,9 @@ export const useApplicationCreateMutation = () =>
       const response = await applicationService.createApplication(payload);
       if (!response.success) {
         throw new Error(response.message);
+      }
+      if (!response.data) {
+        throw new Error("No data returned from create application");
       }
       return response.data;
     },
@@ -105,6 +155,8 @@ export const useApplicationCreateMutation = () =>
         applicationId,
         response: data,
       });
+
+      queryClient.invalidateQueries({ queryKey: ["application-list"] });
 
       if (applicationId && typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
@@ -125,3 +177,111 @@ export const useApplicationCreateMutation = () =>
       console.error("[Application] createApplication failed", error);
     },
   });
+};
+
+export const useApplicationUpdateMutation = (applicationId: string | null) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    ApplicationDetailResponse,
+    Error,
+    Record<string, unknown>
+  >({
+    mutationKey: ["application-update", applicationId],
+    mutationFn: async (payload) => {
+      if (!applicationId) throw new Error("Missing application reference.");
+
+      const response = await applicationService.updateApplication(
+        applicationId,
+        payload
+      );
+
+      if (!response.success) throw new Error(response.message);
+      if (!response.data)
+        throw new Error("Application data is missing from response.");
+
+      return response.data;
+    },
+    onSuccess: (data) => {
+      console.log("[Application] updateApplication success", {
+        applicationId,
+        response: data,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["application-get", applicationId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["application-list"] });
+    },
+    onError: (error) => {
+      console.error("[Application] updateApplication failed", error);
+    },
+  });
+};
+
+export const useApplicationAssignMutation = (applicationId: string | null) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<unknown, Error, Record<string, unknown>>({
+    mutationKey: ["application-assign", applicationId],
+    mutationFn: async (payload) => {
+      if (!applicationId) throw new Error("Missing application reference.");
+
+      const response = await applicationService.assignApplication(
+        applicationId,
+        payload
+      );
+
+      if (!response.success) throw new Error(response.message);
+
+      return response.data;
+    },
+    onSuccess: (data) => {
+      console.log("[Application] assignApplication success", {
+        applicationId,
+        response: data,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["application-get", applicationId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["application-list"] });
+    },
+    onError: (error) => {
+      console.error("[Application] assignApplication failed", error);
+    },
+  });
+};
+
+export const useApplicationChangeStageMutation = (
+  applicationId: string | null
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<unknown, Error, Record<string, unknown>>({
+    mutationKey: ["application-change-stage", applicationId],
+    mutationFn: async (payload) => {
+      if (!applicationId) throw new Error("Missing application reference.");
+
+      const response = await applicationService.changeStage(
+        applicationId,
+        payload
+      );
+
+      if (!response.success) throw new Error(response.message);
+
+      return response.data;
+    },
+    onSuccess: (data) => {
+      console.log("[Application] changeStage success", {
+        applicationId,
+        response: data,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["application-get", applicationId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["application-list"] });
+    },
+    onError: (error) => {
+      console.error("[Application] changeStage failed", error);
+    },
+  });
+};

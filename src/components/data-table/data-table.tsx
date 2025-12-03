@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DataTableToolbar } from "./data-table-toolbar";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export type DataTableFacetedFilterOption = {
   label: string;
@@ -141,6 +143,12 @@ export function DataTable<TData, TValue>({
   const selectedRows = table.getFilteredSelectedRowModel().rows.length;
   const hasSearch = normalizedSearchColumns.length > 0;
 
+
+  const session = useSession();
+
+  const isAgent = session.data?.user?.role === "agent";
+  const router = useRouter();
+
   return (
     <div className="space-y-4">
       <DataTableToolbar
@@ -173,9 +181,9 @@ export function DataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   );
                 })}
@@ -190,7 +198,14 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                   onClick={() => {
                     const data = row.original as Record<string, unknown>;
-                    console.log("row.original.referenceNumber", data.referenceNumber);
+
+                    if (isAgent) {
+
+                      router.push(`/dashboard/application/${data.referenceNumber}`);
+
+                    } else {
+                      router.push(`/dashboard/application-queue/${data.referenceNumber}`);
+                    }
                   }}
                   className="cursor-pointer hover:bg-muted/50"
                 >

@@ -25,6 +25,7 @@ type UseApplicationsOptions = {
 
 const normalizeApplicationList = (raw: unknown): ApplicationsResult => {
   const applications: Application[] = [];
+  let total: number | undefined;
 
   const pushMapped = (item: Record<string, unknown>, index: number) => {
     const rawStatus = (item.status as string) || (item.current_stage as string);
@@ -67,7 +68,22 @@ const normalizeApplicationList = (raw: unknown): ApplicationsResult => {
     });
   } else if (raw && typeof raw === "object") {
     const obj = raw as Record<string, unknown>;
-    if ("id" in obj) {
+    
+    // Check if the response has a 'total' or 'count' field
+    if (typeof obj.total === "number") {
+      total = obj.total;
+    } else if (typeof obj.count === "number") {
+      total = obj.count;
+    }
+    
+    // Check if there's a 'data' or 'applications' array
+    const dataArray = obj.data ?? obj.applications;
+    if (Array.isArray(dataArray)) {
+      dataArray.forEach((item, idx) => {
+        if (item && typeof item === "object")
+          pushMapped(item as Record<string, unknown>, idx);
+      });
+    } else if ("id" in obj) {
       pushMapped(obj, 0);
     } else {
       Object.values(obj).forEach((val, idx) => {
@@ -80,7 +96,7 @@ const normalizeApplicationList = (raw: unknown): ApplicationsResult => {
 
   return {
     applications,
-    total: 0,
+    total,
   };
 };
 
@@ -116,7 +132,7 @@ export const useApplications = ({
       const response = await applicationService.listApplications({
         ...filters,
         search: query || undefined,
-        limit: 5,
+        limit: perPage,
         offset: (page - 1) * perPage,
       });
 

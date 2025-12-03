@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import {
-  useApplicationGetMutation,
+  useApplicationGetQuery,
   useApplicationSubmitMutation,
 } from "@/hooks/useApplication.hook";
 import ApplicationStepHeader from "./application-step-header";
@@ -13,29 +13,10 @@ export default function ReviewForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
 
-  const {
-    mutate: fetchApplication,
-    data,
-    isPending,
-    isError,
-  } = useApplicationGetMutation(applicationId);
+  const { data: response, isLoading, isError } = useApplicationGetQuery(applicationId);
   const submitApplication = useApplicationSubmitMutation(applicationId);
-  const hasFetchedRef = useRef(false);
 
-  useEffect(() => {
-    // Avoid repeated fetches that can lead to aborted requests
-    if (applicationId && !hasFetchedRef.current) {
-      hasFetchedRef.current = true;
-      fetchApplication();
-    }
-  }, [applicationId, fetchApplication]);
-
-  useEffect(() => {
-    // Reset guard if application id changes
-    hasFetchedRef.current = false;
-  }, [applicationId]);
-
-  const applicationData = data?.data;
+  const application = response?.data;
 
   return (
     <div className="space-y-4">
@@ -44,13 +25,15 @@ export default function ReviewForm() {
       </div>
 
       <div className="rounded-md border bg-muted/30 p-4 text-sm">
-        {isPending ? (
-          <p>Loading application...</p>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
         ) : isError ? (
           <p className="text-destructive">Failed to load application.</p>
-        ) : applicationData ? (
+        ) : application ? (
           <pre className="whitespace-pre-wrap break-words text-xs">
-            {JSON.stringify(applicationData, null, 2)}
+            {JSON.stringify(application, null, 2)}
           </pre>
         ) : (
           <p className="text-muted-foreground">
@@ -66,7 +49,7 @@ export default function ReviewForm() {
               submitApplication.mutate();
             }
           }}
-          disabled={submitApplication.isPending || !applicationId}
+          disabled={submitApplication.isPending || !applicationId || isLoading}
         >
           {submitApplication.isPending ? "Submitting..." : "Submit Application"}
         </Button>

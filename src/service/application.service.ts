@@ -124,7 +124,7 @@ class ApplicationService extends ApiService {
       console.log("[API] createApplication request", body);
       const data = await this.post<ApplicationResponse>(
         this.basePath,
-        body,
+        {},
         true
       );
       console.log("[API] createApplication success", data);
@@ -215,6 +215,9 @@ class ApplicationService extends ApiService {
     }
   };
 
+
+  //staff and admin
+
   assignApplication = async (
     applicationId: string,
     payload: Record<string, unknown>
@@ -235,7 +238,7 @@ class ApplicationService extends ApiService {
       return handleApiError(error, "Failed to assign application");
     }
   };
-
+  //staff and admin
   changeStage = async (
     applicationId: string,
     payload: Record<string, unknown>

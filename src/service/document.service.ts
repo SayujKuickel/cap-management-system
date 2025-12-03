@@ -6,6 +6,16 @@ import {
 } from "@/service/service-helpers";
 import type { ServiceResponse } from "@/types/service";
 
+export interface DocumentType {
+  id: string;
+  code: string;
+  name: string;
+  stage: string;
+  is_mandatory: boolean;
+  accepts_ocr: boolean;
+  display_order: number;
+}
+
 class DocumentService extends ApiService {
   private readonly basePath = "documents";
 
@@ -40,6 +50,14 @@ class DocumentService extends ApiService {
           error instanceof Error ? error.message : "Failed to upload document",
       });
     }
+  }
+
+  getDocumentTypes(): Promise<ServiceResponse<DocumentType[]>> {
+    return resolveServiceCall<DocumentType[]>(
+      () => this.get(`${this.basePath}/types`, true),
+      "Document types fetched successfully.",
+      "Failed to fetch document types"
+    );
   }
 }
 

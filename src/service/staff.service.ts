@@ -1,204 +1,378 @@
 import { ApiService } from "@/service/base.service";
-import { resolveServiceCall } from "@/service/service-helpers";
+import { handleApiError } from "@/utils/handle-api-error";
 import type { ServiceResponse } from "@/types/service";
+import type { ApplicationDetailResponse } from "@/service/application.service";
+import type { Application, Document } from "@/constants/types";
 
-type Payload = Record<string, unknown>;
+// --- Request Payloads ---
+
+export interface VerifyDocumentPayload {
+  status: "VERIFIED" | "REJECTED";
+  notes?: string;
+}
+
+export interface AssignApplicationPayload {
+  staff_id: string;
+}
+
+export interface TransitionApplicationPayload {
+  to_stage: string;
+  notes?: string;
+}
+
+export interface AddCommentPayload {
+  comment: string;
+  is_internal?: boolean;
+}
+
+export interface RequestDocumentsPayload {
+  document_type_codes: string[];
+  message: string;
+  due_date?: string;
+}
+
+export interface ApproveApplicationPayload {
+  offer_details: Record<string, unknown>;
+  notes?: string;
+}
+
+export interface RejectApplicationPayload {
+  rejection_reason: string;
+  is_appealable?: boolean;
+}
+
+export interface RecordGsAssessmentPayload {
+  interview_date: string;
+  decision: "pass" | "fail" | "pending";
+  scorecard: Record<string, number>;
+  notes?: string;
+}
+
+export interface GenerateOfferLetterPayload {
+  course_start_date: string;
+  tuition_fee: number;
+  material_fee: number;
+  conditions: string[];
+  template?: string;
+}
+
+// --- Response Types ---
+
+export interface DocumentVerificationResponse {
+  document_id: string;
+  status: string;
+  verified_at: string;
+  message: string;
+}
+
+export interface ApplicationActionResponse {
+  application_id: string;
+  current_stage: string;
+  message: string;
+  updated_at: string;
+}
+
+export interface CommentResponse {
+  timeline_entry_id: string;
+  application_id: string;
+  comment: string;
+  created_at: string;
+}
+
+export interface OfferLetterResponse {
+  application_id: string;
+  offer_letter_url: string;
+  generated_at: string;
+  expires_at: string;
+}
+
+export interface StaffMetrics {
+  total_applications: number;
+  submitted_pending_review: number;
+  in_staff_review: number;
+  awaiting_documents: number;
+  in_gs_assessment: number;
+  offers_generated: number;
+  enrolled: number;
+  rejected: number;
+  documents_pending_verification: number;
+}
 
 class StaffService extends ApiService {
   private readonly basePath = "staff";
 
-  getMetrics(): Promise<ServiceResponse<unknown>> {
-    return resolveServiceCall<unknown>(
-      () => this.get(`${this.basePath}/metrics`, true),
-      "Staff metrics fetched.",
-      "Failed to fetch staff metrics",
-    );
-  }
+  getMetrics = async (): Promise<ServiceResponse<StaffMetrics>> => {
+    try {
+      const data = await this.get<StaffMetrics>(`${this.basePath}/metrics`, true);
+      return {
+        success: true,
+        message: "Staff metrics fetched.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to fetch staff metrics");
+    }
+  };
 
-  getAllMetrics(): Promise<ServiceResponse<unknown>> {
-    return resolveServiceCall<unknown>(
-      () => this.get(`${this.basePath}/metrics/all`, true),
-      "Organization metrics fetched.",
-      "Failed to fetch organization metrics",
-    );
-  }
+  getAllMetrics = async (): Promise<ServiceResponse<StaffMetrics>> => {
+    try {
+      const data = await this.get<StaffMetrics>(
+        `${this.basePath}/metrics/all`,
+        true
+      );
+      return {
+        success: true,
+        message: "Organization metrics fetched.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to fetch organization metrics");
+    }
+  };
 
-  getPendingApplications(): Promise<ServiceResponse<unknown>> {
-    return resolveServiceCall<unknown>(
-      () => this.get(`${this.basePath}/applications/pending`, true),
-      "Pending applications fetched.",
-      "Failed to fetch pending applications",
-    );
-  }
+  getPendingApplications = async (): Promise<
+    ServiceResponse<Application[]>
+  > => {
+    try {
+      const data = await this.get<Application[]>(
+        `${this.basePath}/applications/pending`,
+        true
+      );
+      return {
+        success: true,
+        message: "Pending applications fetched.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to fetch pending applications", []);
+    }
+  };
 
-  getApplicationForReview(
-    applicationId: string,
-  ): Promise<ServiceResponse<unknown>> {
+  getApplicationForReview = async (
+    applicationId: string
+  ): Promise<ServiceResponse<ApplicationDetailResponse>> => {
     if (!applicationId) throw new Error("Application id is required");
-    return resolveServiceCall<unknown>(
-      () => this.get(`${this.basePath}/applications/${applicationId}`, true),
-      "Application details fetched.",
-      "Failed to fetch application details",
-    );
-  }
+    try {
+      const data = await this.get<ApplicationDetailResponse>(
+        `${this.basePath}/applications/${applicationId}`,
+        true
+      );
+      return {
+        success: true,
+        message: "Application details fetched.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to fetch application details");
+    }
+  };
 
-  getPendingDocuments(): Promise<ServiceResponse<unknown>> {
-    return resolveServiceCall<unknown>(
-      () => this.get(`${this.basePath}/documents/pending`, true),
-      "Pending documents fetched.",
-      "Failed to fetch pending documents",
-    );
-  }
+  getPendingDocuments = async (): Promise<ServiceResponse<Document[]>> => {
+    try {
+      const data = await this.get<Document[]>(
+        `${this.basePath}/documents/pending`,
+        true
+      );
+      return {
+        success: true,
+        message: "Pending documents fetched.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to fetch pending documents", []);
+    }
+  };
 
-  verifyDocument(
+  verifyDocument = async (
     documentId: string,
-    payload: Payload,
-  ): Promise<ServiceResponse<unknown>> {
+    payload: VerifyDocumentPayload
+  ): Promise<ServiceResponse<DocumentVerificationResponse>> => {
     if (!documentId) throw new Error("Document id is required");
-    return resolveServiceCall<unknown>(
-      () =>
-        this.patch(`${this.basePath}/documents/${documentId}/verify`, payload, true),
-      "Document verification updated.",
-      "Failed to update document verification",
-    );
-  }
+    try {
+      const data = await this.patch<DocumentVerificationResponse>(
+        `${this.basePath}/documents/${documentId}/verify`,
+        payload,
+        true
+      );
+      return {
+        success: true,
+        message: "Document verification updated.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to update document verification");
+    }
+  };
 
-  assignApplication(
+  assignApplication = async (
     applicationId: string,
-    payload: Payload,
-  ): Promise<ServiceResponse<unknown>> {
+    payload: AssignApplicationPayload
+  ): Promise<ServiceResponse<ApplicationActionResponse>> => {
     if (!applicationId) throw new Error("Application id is required");
-    return resolveServiceCall<unknown>(
-      () =>
-        this.patch(
-          `${this.basePath}/applications/${applicationId}/assign`,
-          payload,
-          true,
-        ),
-      "Application assignment updated.",
-      "Failed to assign application",
-    );
-  }
+    try {
+      const data = await this.patch<ApplicationActionResponse>(
+        `${this.basePath}/applications/${applicationId}/assign`,
+        payload,
+        true
+      );
+      return {
+        success: true,
+        message: "Application assignment updated.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to assign application");
+    }
+  };
 
-  transitionApplication(
+  transitionApplication = async (
     applicationId: string,
-    payload: Payload,
-  ): Promise<ServiceResponse<unknown>> {
+    payload: TransitionApplicationPayload
+  ): Promise<ServiceResponse<ApplicationActionResponse>> => {
     if (!applicationId) throw new Error("Application id is required");
-    return resolveServiceCall<unknown>(
-      () =>
-        this.patch(
-          `${this.basePath}/applications/${applicationId}/transition`,
-          payload,
-          true,
-        ),
-      "Application stage transitioned.",
-      "Failed to transition application",
-    );
-  }
+    try {
+      const data = await this.patch<ApplicationActionResponse>(
+        `${this.basePath}/applications/${applicationId}/transition`,
+        payload,
+        true
+      );
+      return {
+        success: true,
+        message: "Application stage transitioned.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to transition application");
+    }
+  };
 
-  addComment(
+  addComment = async (
     applicationId: string,
-    payload: Payload,
-  ): Promise<ServiceResponse<unknown>> {
+    payload: AddCommentPayload
+  ): Promise<ServiceResponse<CommentResponse>> => {
     if (!applicationId) throw new Error("Application id is required");
-    return resolveServiceCall<unknown>(
-      () =>
-        this.post(
-          `${this.basePath}/applications/${applicationId}/comments`,
-          payload,
-          true,
-        ),
-      "Comment added.",
-      "Failed to add comment",
-    );
-  }
+    try {
+      const data = await this.post<CommentResponse>(
+        `${this.basePath}/applications/${applicationId}/comments`,
+        payload,
+        true
+      );
+      return {
+        success: true,
+        message: "Comment added.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to add comment");
+    }
+  };
 
-  requestDocuments(
+  requestDocuments = async (
     applicationId: string,
-    payload: Payload,
-  ): Promise<ServiceResponse<unknown>> {
+    payload: RequestDocumentsPayload
+  ): Promise<ServiceResponse<ApplicationActionResponse>> => {
     if (!applicationId) throw new Error("Application id is required");
-    return resolveServiceCall<unknown>(
-      () =>
-        this.post(
-          `${this.basePath}/applications/${applicationId}/request-documents`,
-          payload,
-          true,
-        ),
-      "Document request sent.",
-      "Failed to request documents",
-    );
-  }
+    try {
+      const data = await this.post<ApplicationActionResponse>(
+        `${this.basePath}/applications/${applicationId}/request-documents`,
+        payload,
+        true
+      );
+      return {
+        success: true,
+        message: "Document request sent.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to request documents");
+    }
+  };
 
-  approveApplication(
+  approveApplication = async (
     applicationId: string,
-    payload: Payload,
-  ): Promise<ServiceResponse<unknown>> {
+    payload: ApproveApplicationPayload
+  ): Promise<ServiceResponse<ApplicationActionResponse>> => {
     if (!applicationId) throw new Error("Application id is required");
-    return resolveServiceCall<unknown>(
-      () =>
-        this.post(
-          `${this.basePath}/applications/${applicationId}/approve`,
-          payload,
-          true,
-        ),
-      "Application approved.",
-      "Failed to approve application",
-    );
-  }
+    try {
+      const data = await this.post<ApplicationActionResponse>(
+        `${this.basePath}/applications/${applicationId}/approve`,
+        payload,
+        true
+      );
+      return {
+        success: true,
+        message: "Application approved.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to approve application");
+    }
+  };
 
-  rejectApplication(
+  rejectApplication = async (
     applicationId: string,
-    payload: Payload,
-  ): Promise<ServiceResponse<unknown>> {
+    payload: RejectApplicationPayload
+  ): Promise<ServiceResponse<ApplicationActionResponse>> => {
     if (!applicationId) throw new Error("Application id is required");
-    return resolveServiceCall<unknown>(
-      () =>
-        this.post(
-          `${this.basePath}/applications/${applicationId}/reject`,
-          payload,
-          true,
-        ),
-      "Application rejected.",
-      "Failed to reject application",
-    );
-  }
+    try {
+      const data = await this.post<ApplicationActionResponse>(
+        `${this.basePath}/applications/${applicationId}/reject`,
+        payload,
+        true
+      );
+      return {
+        success: true,
+        message: "Application rejected.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to reject application");
+    }
+  };
 
-  recordGsAssessment(
+  recordGsAssessment = async (
     applicationId: string,
-    payload: Payload,
-  ): Promise<ServiceResponse<unknown>> {
+    payload: RecordGsAssessmentPayload
+  ): Promise<ServiceResponse<ApplicationActionResponse>> => {
     if (!applicationId) throw new Error("Application id is required");
-    return resolveServiceCall<unknown>(
-      () =>
-        this.post(
-          `${this.basePath}/applications/${applicationId}/gs-assessment`,
-          payload,
-          true,
-        ),
-      "GS assessment recorded.",
-      "Failed to record GS assessment",
-    );
-  }
+    try {
+      const data = await this.post<ApplicationActionResponse>(
+        `${this.basePath}/applications/${applicationId}/gs-assessment`,
+        payload,
+        true
+      );
+      return {
+        success: true,
+        message: "GS assessment recorded.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to record GS assessment");
+    }
+  };
 
-  generateOfferLetter(
+  generateOfferLetter = async (
     applicationId: string,
-    payload: Payload,
-  ): Promise<ServiceResponse<unknown>> {
+    payload: GenerateOfferLetterPayload
+  ): Promise<ServiceResponse<OfferLetterResponse>> => {
     if (!applicationId) throw new Error("Application id is required");
-    return resolveServiceCall<unknown>(
-      () =>
-        this.post(
-          `${this.basePath}/applications/${applicationId}/generate-offer-letter`,
-          payload,
-          true,
-        ),
-      "Offer letter generated.",
-      "Failed to generate offer letter",
-    );
-  }
+    try {
+      const data = await this.post<OfferLetterResponse>(
+        `${this.basePath}/applications/${applicationId}/generate-offer-letter`,
+        payload,
+        true
+      );
+      return {
+        success: true,
+        message: "Offer letter generated.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError(error, "Failed to generate offer letter");
+    }
+  };
 }
 
 const staffService = new StaffService();
 export default staffService;
+

@@ -8,7 +8,7 @@ const NAV_LINKS: Record<UserRole, Array<NavItem>> = {
   admin: [{ label: "Dashboard", href: siteRoutes.dashboard.root, icon: "dashboard" }],
   student: [{ label: "Dashboard", href: siteRoutes.dashboard.root, icon: "dashboard" }],
   agent: [
-    { label: "Dashboard", href: siteRoutes.dashboard.root, icon: "dashboard" },
+    // { label: "Dashboard", href: siteRoutes.dashboard.root, icon: "dashboard" },
     {
       label: "Applications",
       href: siteRoutes.dashboard.application.root,
