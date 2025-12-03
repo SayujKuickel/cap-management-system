@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import useApplications from "@/hooks/useApplications.hook";
 
 const ApplicationQueuePage = () => {
+  
   const {
     applications,
     total,
@@ -22,6 +23,8 @@ const ApplicationQueuePage = () => {
     isLoading && !applications.length
       ? "Loading applications..."
       : `Applications (${total ?? 0})`;
+
+  
 
   return (
     <section className="space-y-6">

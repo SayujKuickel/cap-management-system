@@ -84,7 +84,7 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
+    []
   );
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>(defaultColumnVisibility ?? {});
@@ -93,7 +93,7 @@ export function DataTable<TData, TValue>({
 
   const normalizedSearchColumns = React.useMemo(
     () => searchableColumns?.map(String) ?? [],
-    [searchableColumns],
+    [searchableColumns]
   );
 
   const searchFilteredData = React.useMemo(() => {
@@ -107,7 +107,7 @@ export function DataTable<TData, TValue>({
         const rawValue = getValueByPath(item, columnKey);
         if (rawValue == null) return false;
         return String(rawValue).toLowerCase().includes(query);
-      }),
+      })
     );
   }, [data, normalizedSearchColumns, searchValue]);
 
@@ -130,6 +130,11 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: enableLocalPagination
       ? getPaginationRowModel()
       : undefined,
+    defaultColumn: {
+      size: 100,
+      minSize: 50,
+      maxSize: 200,
+    },
   });
 
   const totalRows = searchFilteredData.length;
@@ -148,19 +153,28 @@ export function DataTable<TData, TValue>({
         actions={toolbarActions}
       />
 
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border w-full small-sidebar-width ">
+        <Table className="table-fixed small-sidebar-width">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
+                  const size = header.column.getSize();
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      style={{
+                        width: `${size}px`,
+                        minWidth: `${size}px`,
+                        maxWidth: `${size}px`,
+                      }}
+                      className="whitespace-nowrap"
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext(),
+                            header.getContext()
                           )}
                     </TableHead>
                   );
@@ -174,15 +188,31 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  onClick={() => {
+                    const data = row.original as Record<string, unknown>;
+                    console.log("row.original.referenceNumber", data.referenceNumber);
+                  }}
+                  className="cursor-pointer hover:bg-muted/50"
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const size = cell.column.getSize();
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        style={{
+                          width: `${size}px`,
+                          minWidth: `${size}px`,
+                          maxWidth: `${size}px`,
+                        }}
+                        className="overflow-hidden"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (

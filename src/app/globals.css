@@ -143,4 +143,42 @@
     @apply mx-auto w-full px-1.5 sm:px-2.5 lg:px-2.5;
     max-width: 1600px;
   }
+
+   /* Hide scrollbar for Chrome, Safari and Opera */
+   .hidden-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .hidden-scroll {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  /* Custom scrollbar for Chrome, Safari, and Opera */
+  .small-sidebar-width::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .small-sidebar-width::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .small-sidebar-width::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+
+  .small-sidebar-width::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+  }
+
+  .dark .small-sidebar-width::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .small-sidebar-width::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
 }

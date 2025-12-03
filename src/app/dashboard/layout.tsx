@@ -36,10 +36,10 @@ const DashboardLayout = async ({ children }: { children: ReactNode }) => {
         }}
       />
 
-      <SidebarInset className="bg-background">
+      <SidebarInset className="bg-background overflow-x-hidden">
         <AppToolbar />
-        <div className="flex-1 p-3 md:p-6">
-          <div className="max-w-380 mx-auto">{children}</div>
+        <div className="flex-1 p-3 md:p-6 overflow-x-hidden">
+          <div className="w-full max-w-full mx-auto">{children}</div>
         </div>
       </SidebarInset>
     </SidebarProvider>

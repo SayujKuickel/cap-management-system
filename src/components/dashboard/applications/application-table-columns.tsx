@@ -71,7 +71,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const stageLabelMap: Record<ApplicationStage, string> = {
+const stageLabelMap: Record<ApplicationStage | string, string> = {
   [ApplicationStage.INITIAL_REVIEW]: "Initial Review",
   [ApplicationStage.DOCUMENT_VERIFICATION]: "Document Verification",
   [ApplicationStage.OFFER_GENERATION]: "Offer Generation",
@@ -80,6 +80,7 @@ const stageLabelMap: Record<ApplicationStage, string> = {
   [ApplicationStage.FEE_PAYMENT]: "Fee Payment",
   [ApplicationStage.COE_GENERATION]: "COE Generation",
   [ApplicationStage.COMPLETED]: "Completed",
+  draft: "Draft",
 };
 
 const formatDate = (value?: string | null) => {
@@ -117,55 +118,123 @@ export const applicationColumns: ColumnDef<Application>[] = [
   {
     accessorKey: "referenceNumber",
     meta: { columnTitle: "Reference" },
+    size: 180,
+    minSize: 150,
+    maxSize: 200,
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Reference" />
+      <DataTableColumnHeader
+        column={column}
+        title="Reference"
+        className="text-center"
+      />
     ),
     cell: ({ row }) => (
-      <div className="font-semibold text-foreground">
-        {row.getValue("referenceNumber")}
+      <div
+        className="font-semibold text-foreground  truncate"
+        title={row.getValue("referenceNumber") || "—"}
+      >
+        {row.getValue("referenceNumber") || "—"}
       </div>
     ),
   },
   {
     accessorKey: "studentName",
     meta: { columnTitle: "Student" },
+    size: 150,
+    minSize: 120,
+    maxSize: 180,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Student" />
     ),
     cell: ({ row }) => (
-      <div>
-        <p className="text-sm font-medium">{row.getValue("studentName")}</p>
-        <p className="text-xs text-muted-foreground">
-          {row.original.studentEmail}
-        </p>
+      <div
+        className="text-sm font-medium text-center truncate"
+        title={row.getValue("studentName") || "Unknown student"}
+      >
+        {row.getValue("studentName") || "Unknown student"}
       </div>
     ),
   },
+  // {
+  //   accessorKey: "studentEmail",
+  //   meta: { columnTitle: "Student Email" },
+  //   size: 200,
+  //   minSize: 180,
+  //   maxSize: 250,
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Student Email" />
+  //   ),
+  //   cell: ({ row }) => (
+  //     <div
+  //       className="text-sm text-muted-foreground text-center truncate"
+  //       title={row.getValue("studentEmail") || "—"}
+  //     >
+  //       {row.getValue("studentEmail") || "—"}
+  //     </div>
+  //   ),
+  // },
+
+  // {
+  //   accessorKey: "agentName",
+  //   meta: { columnTitle: "Agent" },
+  //   size: 120,
+  //   minSize: 100,
+  //   maxSize: 150,
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Agent" />
+  //   ),
+  //   cell: ({ row }) => (
+  //     <div
+  //       className="text-sm text-start truncate whitespace-normal"
+  //       title={row.getValue("agentName") || "—"}
+  //     >
+  //       {row.getValue("agentName") || "—"}
+  //     </div>
+  //   ),
+  // },
+
   {
     accessorKey: "destination",
     meta: { columnTitle: "Destination" },
+    size: 120,
+    minSize: 100,
+    maxSize: 150,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Destination" />
     ),
     cell: ({ row }) => (
-      <div className="text-sm">{row.getValue("destination")}</div>
+      <div
+        className="text-sm text-start truncate whitespace-normal"
+        title={row.getValue("destination") || "—"}
+      >
+        {row.getValue("destination") || "—"}
+      </div>
     ),
   },
   {
     accessorKey: "course",
     meta: { columnTitle: "Course" },
+    size: 200,
+    minSize: 180,
+    maxSize: 250,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Course" />
     ),
     cell: ({ row }) => (
-      <div className="max-w-[220px] text-sm text-muted-foreground">
-        {row.getValue("course")}
+      <div
+        className="text-sm text-muted-foreground text-start truncate whitespace-normal"
+        title={row.getValue("course") || "—"}
+      >
+        {row.getValue("course") || "—"}
       </div>
     ),
   },
   {
     accessorKey: "status",
     meta: { columnTitle: "Status" },
+    size: 130,
+    minSize: 120,
+    maxSize: 150,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Status" />
     ),
@@ -184,38 +253,58 @@ export const applicationColumns: ColumnDef<Application>[] = [
   {
     accessorKey: "currentStage",
     meta: { columnTitle: "Current Stage" },
+    size: 160,
+    minSize: 140,
+    maxSize: 200,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Current Stage" />
     ),
-    cell: ({ row }) => (
-      <div className="text-sm text-muted-foreground">
-        {stageLabelMap[row.original.currentStage]}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const stage = row.original.currentStage;
+      if (!stage) return <div className="text-sm text-muted-foreground">—</div>;
+      const label =
+        stageLabelMap[stage] ||
+        stage.charAt(0).toUpperCase() + stage.slice(1).replace(/_/g, " ");
+      return (
+        <div className="text-sm text-muted-foreground text-start truncate whitespace-normal" title={label}>
+          {label}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "intake",
     meta: { columnTitle: "Intake" },
+    size: 100,
+    minSize: 80,
+    maxSize: 120,
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Intake" />
     ),
     cell: ({ row }) => (
-      <div className="text-sm text-muted-foreground">
-        {row.getValue("intake")}
+      <div
+        className="text-sm text-muted-foreground text-start truncate whitespace-normal      "
+        title={row.getValue("intake") || "—"}
+      >
+        {row.getValue("intake") || "—"}
       </div>
     ),
   },
-  {
-    id: "updatedAt",
-    accessorKey: "updatedAt",
-    meta: { columnTitle: "Updated" },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Updated" />
-    ),
-    cell: ({ row }) => (
-      <div className="text-sm text-muted-foreground">
-        {formatDate(row.original.updatedAt)}
-      </div>
-    ),
-  },
+
+  // {
+  //   id: "updatedAt",
+  //   accessorKey: "updatedAt",
+  //   meta: { columnTitle: "Updated" },
+  //   size: 120,
+  //   minSize: 100,
+  //   maxSize: 140,
+  //   header: ({ column }) => (
+  //     <DataTableColumnHeader column={column} title="Updated" />
+  //   ),
+  //   cell: ({ row }) => (
+  //     <div className="text-sm text-muted-foreground">
+  //       {formatDate(row.original.updatedAt)}
+  //     </div>
+  //   ),
+  // },
 ];

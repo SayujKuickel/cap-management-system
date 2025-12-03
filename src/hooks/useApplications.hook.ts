@@ -116,7 +116,7 @@ export const useApplications = ({
       const response = await applicationService.listApplications({
         ...filters,
         search: query || undefined,
-        limit: perPage,
+        limit: 5,
         offset: (page - 1) * perPage,
       });
 
