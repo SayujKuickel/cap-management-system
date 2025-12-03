@@ -28,6 +28,8 @@ import { Button } from "@/components/ui/button";
 import { DataTableToolbar } from "./data-table-toolbar";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { ApplicationKanban } from "../dashboard/applications/kanban/application-kanban";
+import { Application } from "@/constants/types";
 
 export type DataTableFacetedFilterOption = {
   label: string;
@@ -71,6 +73,9 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string;
   toolbarActions?: React.ReactNode;
   enableLocalPagination?: boolean;
+
+  isallowMovingInKanban?: boolean;
+  view: "table" | "kanban";
 }
 
 export function DataTable<TData, TValue>({
@@ -82,7 +87,10 @@ export function DataTable<TData, TValue>({
   searchableColumns,
   searchPlaceholder,
   toolbarActions,
+
   enableLocalPagination = true,
+  isallowMovingInKanban = false,
+  view = "table",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -143,7 +151,6 @@ export function DataTable<TData, TValue>({
   const selectedRows = table.getFilteredSelectedRowModel().rows.length;
   const hasSearch = normalizedSearchColumns.length > 0;
 
-
   const session = useSession();
 
   const isAgent = session.data?.user?.role === "agent";
@@ -161,93 +168,101 @@ export function DataTable<TData, TValue>({
         actions={toolbarActions}
       />
 
-      <div className="rounded-md border w-full small-sidebar-width ">
-        <Table className="table-fixed small-sidebar-width">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  const size = header.column.getSize();
-                  return (
-                    <TableHead
-                      key={header.id}
-                      style={{
-                        width: `${size}px`,
-                        minWidth: `${size}px`,
-                        maxWidth: `${size}px`,
-                      }}
-                      className="whitespace-nowrap"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  onClick={() => {
-                    const data = row.original as Record<string, unknown>;
-
-                    if (isAgent) {
-
-                      router.push(`/dashboard/application/${data.referenceNumber}`);
-
-                    } else {
-                      router.push(`/dashboard/application-queue/${data.referenceNumber}`);
-                    }
-                  }}
-                  className="cursor-pointer hover:bg-muted/50"
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    const size = cell.column.getSize();
+      {view === "table" ? (
+        <div className="rounded-md border w-full small-sidebar-width ">
+          <Table className="table-fixed small-sidebar-width">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const size = header.column.getSize();
                     return (
-                      <TableCell
-                        key={cell.id}
+                      <TableHead
+                        key={header.id}
                         style={{
                           width: `${size}px`,
                           minWidth: `${size}px`,
                           maxWidth: `${size}px`,
                         }}
-                        className="overflow-hidden"
+                        className="whitespace-nowrap"
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </TableHead>
                     );
                   })}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-sm text-muted-foreground"
-                >
-                  <div className="space-y-1">
-                    <p>{emptyState?.title ?? "No results found"}</p>
-                    {emptyState?.description ? (
-                      <p className="text-xs">{emptyState.description}</p>
-                    ) : null}
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    onClick={() => {
+                      const data = row.original as Record<string, unknown>;
+
+                      if (isAgent) {
+                        router.push(
+                          `/dashboard/application/${data.referenceNumber}`
+                        );
+                      } else {
+                        router.push(
+                          `/dashboard/application-queue/${data.referenceNumber}`
+                        );
+                      }
+                    }}
+                    className="cursor-pointer hover:bg-muted/50"
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      const size = cell.column.getSize();
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          style={{
+                            width: `${size}px`,
+                            minWidth: `${size}px`,
+                            maxWidth: `${size}px`,
+                          }}
+                          className="overflow-hidden"
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-24 text-center text-sm text-muted-foreground"
+                  >
+                    <div className="space-y-1">
+                      <p>{emptyState?.title ?? "No results found"}</p>
+                      {emptyState?.description ? (
+                        <p className="text-xs">{emptyState.description}</p>
+                      ) : null}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <div className="rounded-md border w-full small-sidebar-width ">
+          <ApplicationKanban data={data as Application[]} isallowMovingInKanban={isallowMovingInKanban} />
+        </div>
+      )}
 
       <div className="flex flex-col gap-2 px-1 py-1 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
         <div>

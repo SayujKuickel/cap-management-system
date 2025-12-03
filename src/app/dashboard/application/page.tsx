@@ -37,6 +37,7 @@ const AgentApplicationPage = () => {
         data={applications}
         isLoading={isLoading}
         isFetching={isFetching}
+        isKanban={true}
       />
 
       <div className="flex flex-col gap-3 rounded-md border px-3 py-2 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">

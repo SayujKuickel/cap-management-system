@@ -17,13 +17,19 @@ interface ApplicationTableProps {
   data?: Application[];
   isLoading?: boolean;
   isFetching?: boolean;
+  isKanban?: boolean;
+  isallowMovingInKanban?: boolean;
 }
 
 export const ApplicationTable = ({
   data = [],
   isLoading = false,
   isFetching = false,
+  isKanban = false,
+  isallowMovingInKanban = false,
 }: ApplicationTableProps) => {
+  const [view, setView] = React.useState<"table" | "kanban">("table");
+
   const filters = React.useMemo<DataTableFacetedFilter[]>(
     () => [
       {
@@ -46,6 +52,8 @@ export const ApplicationTable = ({
   return (
     <DataTable
       columns={applicationColumns}
+      view={view}
+      isallowMovingInKanban={isallowMovingInKanban}
       data={data}
       facetedFilters={filters}
       searchableColumns={[
@@ -64,11 +72,28 @@ export const ApplicationTable = ({
           {isFetching ? (
             <span className="text-xs text-muted-foreground">Refreshing...</span>
           ) : null}
+
           <Button asChild size="sm">
             <Link href={siteRoutes.dashboard.application.new}>
               New Application
             </Link>
           </Button>
+
+          {isKanban ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (view === "kanban") {
+                  setView("table");
+                } else {
+                  setView("kanban");
+                }
+              }}
+            >
+              {view === "kanban" ? "Table View" : "Kanban View"}
+            </Button>
+          ) : null}
         </div>
       }
       enableLocalPagination={false}

@@ -562,7 +562,7 @@ export default function DocumentsUploadForm() {
                             {docType.is_mandatory ? "Required" : "Optional"}
                           </Badge>
                           <Badge className="text-xs">
-                            {docType.accepts_ocr
+                            {docType.ocr_model_ref
                               ? "Accepts OCR "
                               : "Does not accept OCR"}
                           </Badge>
