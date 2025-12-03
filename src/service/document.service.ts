@@ -12,8 +12,52 @@ export interface DocumentType {
   name: string;
   stage: string;
   is_mandatory: boolean;
-  accepts_ocr: boolean;
+  ocr_model_ref: string;
   display_order: number;
+}
+
+export interface DocumentVersion {
+  id: string;
+  document_id: string;
+  blob_url: string;
+  checksum: string;
+  file_size_bytes: number;
+  version_number: number;
+  ocr_json: Record<string, unknown>;
+  preview_url: string;
+  created_at: string;
+}
+
+export interface Document {
+  id: string;
+  application_id: string;
+  document_type_id: string;
+  status: "pending" | "approved" | "rejected";
+  uploaded_by: string;
+  uploaded_at: string;
+  ocr_status: "pending" | "processing" | "completed" | "failed";
+  ocr_completed_at: string | null;
+  gs_document_requests: Record<string, unknown>[];
+  document_type: DocumentType;
+  versions: DocumentVersion[];
+  latest_version: DocumentVersion;
+  uploader_email: string;
+  uploader_name: string;
+}
+
+export interface ApplicationDocumentListItem {
+  id: string;
+  application_id: string;
+  document_type_id: string;
+  document_type_name: string;
+  document_type_code: string;
+  status: "pending" | "approved" | "rejected";
+  ocr_status: "pending" | "processing" | "completed" | "failed";
+  uploaded_at: string;
+  uploaded_by: string;
+  uploader_email: string;
+  file_size_bytes: number;
+  latest_version_id: string;
 }
 
 export interface OcrSectionData {
@@ -102,6 +146,36 @@ class DocumentService extends ApiService {
         ),
       "Extracted data fetched successfully.",
       "Failed to fetch extracted data"
+    );
+  }
+
+  getDocument(
+    documentId: string,
+    includeVersions: boolean = false
+  ): Promise<ServiceResponse<Document>> {
+    const queryParams: Record<string, QueryValue> = {
+      include_versions: includeVersions,
+    };
+    const queryString = buildQueryString(queryParams);
+
+    return resolveServiceCall<Document>(
+      () => this.get(`${this.basePath}/${documentId}${queryString}`, true),
+      "Document fetched successfully.",
+      "Failed to fetch document"
+    );
+  }
+
+  listApplicationDocuments(
+    applicationId: string
+  ): Promise<ServiceResponse<ApplicationDocumentListItem[]>> {
+    return resolveServiceCall<ApplicationDocumentListItem[]>(
+      () =>
+        this.get(
+          `${this.basePath}/application/${applicationId}/list`,
+          true
+        ),
+      "Application documents fetched successfully.",
+      "Failed to fetch application documents"
     );
   }
 }

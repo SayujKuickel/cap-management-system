@@ -73,6 +73,47 @@ export const useDocumentOcrQuery = (applicationId: string | null) => {
   return query;
 };
 
+export const useDocumentQuery = (
+  documentId: string | null,
+  includeVersions: boolean = false
+) => {
+  return useQuery({
+    queryKey: ["document", documentId, includeVersions],
+    queryFn: async () => {
+      if (!documentId) throw new Error("Document ID is required");
+      const response = await documentService.getDocument(
+        documentId,
+        includeVersions
+      );
+      if (!response.success) {
+        throw new Error(response.message || "Failed to fetch document");
+      }
+      return response;
+    },
+    enabled: !!documentId,
+  });
+};
+
+export const useApplicationDocumentsQuery = (applicationId: string | null) => {
+  return useQuery({
+    queryKey: ["application-documents", applicationId],
+    queryFn: async () => {
+      if (!applicationId) throw new Error("Application ID is required");
+      const response = await documentService.listApplicationDocuments(
+        applicationId
+      );
+      if (!response.success) {
+        throw new Error(
+          response.message || "Failed to fetch application documents"
+        );
+      }
+      return response;
+    },
+    enabled: !!applicationId,
+    staleTime: 1000 * 10, // 10 seconds - documents can change frequently
+  });
+};
+
 // Mutation hooks
 export const useUploadDocument = () => {
   const queryClient = useQueryClient();

@@ -39,7 +39,7 @@ const NewApplicationForm = () => {
     <div className="mx-auto w-full">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {/* Sidebar */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 self-start">
           <Card className="sticky top-8 z-10">
             <CardContent className="px-2 py-3">
               <div className="mb-2 border-b pb-2">
@@ -65,8 +65,8 @@ const NewApplicationForm = () => {
                         currentStep === step.id
                           ? "bg-primary-foreground text-primary"
                           : isStepCompleted(step.id)
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-muted"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-muted"
                       )}
                     >
                       {currentStep === step.id || isStepCompleted(step.id) ? (

@@ -8,6 +8,7 @@ import {
   FileText,
   Clock,
   Loader2,
+  CloudCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApplicationStatusBadge } from "@/components/shared/ApplicationStatusBadge";
 import { useApplicationGetQuery } from "@/hooks/useApplication.hook";
+import { useApplicationDocumentsQuery } from "@/hooks/document.hook";
 import { siteRoutes } from "@/constants/site-routes";
 
 export default function AgentApplicationDetail() {
@@ -28,8 +30,14 @@ export default function AgentApplicationDetail() {
   const id = params.id as string;
   const router = useRouter();
 
-  const { data: response, isLoading, isError } = useApplicationGetQuery(id);
+  const { data: response, isLoading, isError, error } = useApplicationGetQuery(id);
+  const { data: documentsResponse, isLoading: isDocumentsLoading } =
+    useApplicationDocumentsQuery(id);
+
   const application = response?.data;
+  const documents = documentsResponse?.data || [];
+
+  console.log(documents), "documents";
 
   if (isLoading) {
     return (
@@ -39,13 +47,45 @@ export default function AgentApplicationDetail() {
     );
   }
 
-  if (isError || !application) {
+  if (isError) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">Application not found</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
+        <div className="rounded-full bg-destructive/10 p-3 mb-4">
+          <CloudCog className="h-6 w-6 text-destructive" />
+        </div>
+        <h3 className="text-lg font-semibold">Error Loading Application</h3>
+        <p className="text-muted-foreground mt-2 max-w-md">
+          {(error as Error)?.message ||
+            "Something went wrong while fetching the application details."}
+        </p>
         <Button
-          onClick={() => router.push(siteRoutes.dashboard.applicationQueue.root)}
-          className="mt-4"
+          onClick={() =>
+            router.push(siteRoutes.dashboard.applicationQueue.root)
+          }
+          className="mt-6"
+        >
+          Back to Applications
+        </Button>
+      </div>
+    );
+  }
+
+  if (!application) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6">
+        <div className="rounded-full bg-muted p-3 mb-4">
+          <FileText className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <h3 className="text-lg font-semibold">Application Not Found</h3>
+        <p className="text-muted-foreground mt-2 max-w-md">
+          The application you are looking for does not exist or you do not have
+          permission to view it.
+        </p>
+        <Button
+          onClick={() =>
+            router.push(siteRoutes.dashboard.applicationQueue.root)
+          }
+          className="mt-6"
         >
           Back to Applications
         </Button>
@@ -62,6 +102,15 @@ export default function AgentApplicationDetail() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (!bytes) return "0 Bytes";
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
   };
 
   const studentName =
@@ -173,40 +222,52 @@ export default function AgentApplicationDetail() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Passport</p>
-                      <p className="text-sm text-muted-foreground">
-                        {application.personal_details?.passport_number || "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Download
-                  </Button>
+              {isDocumentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">IELTS Certificate</p>
-                      <p className="text-sm text-muted-foreground">
-                        Overall:{" "}
-                        {application.language_cultural_data?.english_test_score ||
-                          "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Download className="h-4 w-4" />
-                    Download
-                  </Button>
+              ) : documents.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No documents found for this application
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  {documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between p-3 rounded-lg border"
+                    >
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-8 w-8 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">{doc.document_type_name}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>{formatBytes(doc.file_size_bytes)}</span>
+                            <span>•</span>
+                            <span>{formatDate(doc.uploaded_at)}</span>
+                            <Badge
+                              variant={
+                                doc.status === "approved"
+                                  ? "default" // "success" variant might not exist in default shadcn Badge
+                                  : doc.status === "rejected"
+                                    ? "destructive"
+                                    : "secondary"
+                              }
+                              className="ml-2 h-5 text-[10px]"
+                            >
+                              {doc.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Download className="h-4 w-4" />
+                        Download
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
