@@ -32,13 +32,14 @@ export const authOptions: NextAuthOptions = {
         const login = await apiLogin(credentials.email, credentials.password);
 
         return {
-          id: login.user_id,
-          email: login.email,
-          role: login.role,
+          id: login.user.id,
+          email: login.user.email,
+          role: login.user.role,
+          status: login.user.status,
+          rto_profile_id: login.user.rto_profile_id,
           accessToken: login.access_token,
           refreshToken: login.refresh_token,
           tokenType: login.token_type,
-          mfaRequired: login.mfa_required,
         };
       },
     }),
@@ -50,18 +51,20 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       type AuthorizedUser = {
         role?: string;
+        status?: string;
+        rto_profile_id?: string | null;
         accessToken?: string;
         refreshToken?: string;
         tokenType?: string;
-        mfaRequired?: boolean;
       };
       if (user) {
         const authUser = user as AuthorizedUser;
         token.role = authUser.role;
+        token.status = authUser.status;
+        token.rto_profile_id = authUser.rto_profile_id;
         token.accessToken = authUser.accessToken;
         token.refreshToken = authUser.refreshToken;
         token.tokenType = authUser.tokenType;
-        token.mfaRequired = authUser.mfaRequired;
       }
       return token;
     },
@@ -71,11 +74,12 @@ export const authOptions: NextAuthOptions = {
         id: token.sub,
         email: token.email,
         role: token.role as string | undefined,
+        status: token.status as string | undefined,
+        rto_profile_id: token.rto_profile_id as string | null | undefined,
       };
       session.accessToken = token.accessToken as string | undefined;
       session.refreshToken = token.refreshToken as string | undefined;
       session.tokenType = token.tokenType as string | undefined;
-      session.mfaRequired = token.mfaRequired as boolean | undefined;
       return session;
     },
   },

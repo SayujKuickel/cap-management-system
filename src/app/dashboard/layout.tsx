@@ -13,6 +13,8 @@ const getDisplayName = (email: string) => email.split("@")[0] ?? email;
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const { data: session } = useSession();
 
+  console.log(session,"hello world")
+
   // Safely extract the role with type guard and default fallback
   const userRole = (session?.user?.role as UserRole)
   const userEmail = session?.user?.email ?? "";

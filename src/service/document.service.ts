@@ -12,7 +12,8 @@ export interface DocumentType {
   name: string;
   stage: string;
   is_mandatory: boolean;
-  ocr_model_ref: string;
+  accepts_ocr: boolean;
+  ocr_model_ref?: string;
   display_order: number;
 }
 
