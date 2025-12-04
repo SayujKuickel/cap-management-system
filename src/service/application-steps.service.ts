@@ -34,6 +34,11 @@ export interface StepUpdateResponse {
   message?: string;
 }
 
+export interface SurveyAvailabilityCode {
+  code: string;
+  label: string;
+}
+
 class ApplicationStepsService extends ApiService {
   private readonly basePath = "applications";
 
@@ -44,14 +49,14 @@ class ApplicationStepsService extends ApiService {
 
   updatePersonalDetails = async (
     applicationId: string,
-    input: PersonalDetailsValues,
+    input: PersonalDetailsValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = personalDetailsSchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 1, "personal-details"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -61,21 +66,21 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save personal details",
+        "Failed to save personal details"
       );
     }
   };
 
   updateEmergencyContact = async (
     applicationId: string,
-    input: EmergencyContactValues,
+    input: EmergencyContactValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = emergencyContactSchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 2, "emergency-contact"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -85,21 +90,21 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save emergency contact",
+        "Failed to save emergency contact"
       );
     }
   };
 
   updateHealthCover = async (
     applicationId: string,
-    input: HealthCoverValues,
+    input: HealthCoverValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = healthCoverSchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 3, "health-cover"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -109,21 +114,21 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save health cover details",
+        "Failed to save health cover details"
       );
     }
   };
 
   updateLanguageCultural = async (
     applicationId: string,
-    input: LanguageCulturalValues,
+    input: LanguageCulturalValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = languageCulturalSchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 4, "language-cultural"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -133,21 +138,21 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save language & cultural information",
+        "Failed to save language & cultural information"
       );
     }
   };
 
   updateDisabilitySupport = async (
     applicationId: string,
-    input: DisabilitySupportValues,
+    input: DisabilitySupportValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = disabilitySupportSchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 5, "disability-support"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -157,21 +162,21 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save disability details",
+        "Failed to save disability details"
       );
     }
   };
 
   updateSchoolingHistory = async (
     applicationId: string,
-    input: SchoolingHistoryValues,
+    input: SchoolingHistoryValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = schoolingHistorySchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 6, "schooling-history"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -181,21 +186,21 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save schooling history",
+        "Failed to save schooling history"
       );
     }
   };
 
   updatePreviousQualifications = async (
     applicationId: string,
-    input: PreviousQualificationsValues,
+    input: PreviousQualificationsValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = previousQualificationsSchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 7, "qualifications"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -205,21 +210,21 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save qualification details",
+        "Failed to save qualification details"
       );
     }
   };
 
   updateEmploymentHistory = async (
     applicationId: string,
-    input: EmploymentHistoryValues,
+    input: EmploymentHistoryValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = employmentHistorySchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 8, "employment-history"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -229,21 +234,21 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save employment history",
+        "Failed to save employment history"
       );
     }
   };
 
   updateUsi = async (
     applicationId: string,
-    input: UsiValues,
+    input: UsiValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = usiSchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 9, "usi"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -253,21 +258,21 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save USI details",
+        "Failed to save USI details"
       );
     }
   };
 
   updateAdditionalServices = async (
     applicationId: string,
-    input: AdditionalServicesValues,
+    input: AdditionalServicesValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = additionalServicesSchema.parse(input);
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 10, "additional-services"),
         body,
-        true,
+        true
       );
       return {
         success: true,
@@ -277,21 +282,26 @@ class ApplicationStepsService extends ApiService {
     } catch (error) {
       return handleApiError<StepUpdateResponse>(
         error,
-        "Failed to save additional services",
+        "Failed to save additional services"
       );
     }
   };
 
   updateSurvey = async (
     applicationId: string,
-    input: SurveyValues,
+    input: SurveyValues
   ): Promise<ServiceResponse<StepUpdateResponse>> => {
     try {
       const body = surveySchema.parse(input);
+
+      const newBody = {
+        ...body,
+        availability_status: body.availability_status,
+      };
       const data = await this.patch<StepUpdateResponse>(
         this.stepPath(applicationId, 11, "survey"),
-        body,
-        true,
+        newBody,
+        true
       );
       return {
         success: true,
@@ -299,21 +309,18 @@ class ApplicationStepsService extends ApiService {
         data,
       };
     } catch (error) {
-      return handleApiError<StepUpdateResponse>(
-        error,
-        "Failed to save survey",
-      );
+      return handleApiError<StepUpdateResponse>(error, "Failed to save survey");
     }
   };
 
   getDocumentStatus = async (
-    applicationId: string,
+    applicationId: string
   ): Promise<ServiceResponse<unknown>> => {
     if (!applicationId) throw new Error("Application id is required");
     try {
       const data = await this.get<unknown>(
         this.stepPath(applicationId, 12, "documents"),
-        true,
+        true
       );
       return {
         success: true,
@@ -322,6 +329,27 @@ class ApplicationStepsService extends ApiService {
       };
     } catch (error) {
       return handleApiError(error, "Failed to fetch document status");
+    }
+  };
+
+  getSurveyAvailabilityCodes = async (): Promise<
+    ServiceResponse<SurveyAvailabilityCode[]>
+  > => {
+    try {
+      const data = await this.get<SurveyAvailabilityCode[]>(
+        `${this.basePath}/survey-availability-codes`,
+        false
+      );
+      return {
+        success: true,
+        message: "Survey availability codes fetched.",
+        data,
+      };
+    } catch (error) {
+      return handleApiError<SurveyAvailabilityCode[]>(
+        error,
+        "Failed to fetch survey availability codes"
+      );
     }
   };
 }

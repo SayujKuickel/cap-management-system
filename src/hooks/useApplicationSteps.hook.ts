@@ -1,5 +1,5 @@
 "use client";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   APPLICATION_STEP_IDS,
   type ApplicationStepId,
@@ -20,7 +20,10 @@ import {
   UsiValues,
 } from "@/validation/application.validation";
 import type { ServiceResponse } from "@/types/service";
-import type { StepUpdateResponse } from "@/service/application-steps.service";
+import type {
+  StepUpdateResponse,
+  SurveyAvailabilityCode,
+} from "@/service/application-steps.service";
 import { toast } from "react-hot-toast";
 import { useApplicationFormDataStore } from "@/store/useApplicationFormData.store";
 
@@ -150,3 +153,20 @@ export const useApplicationStepMutations = (applicationId: string | null) => ({
     applicationId
   ),
 });
+
+// Query hook for fetching survey availability codes
+export const useSurveyAvailabilityCodes = () => {
+  return useQuery<ServiceResponse<SurveyAvailabilityCode[]>, Error>({
+    queryKey: ["survey-availability-codes"],
+    queryFn: async () => {
+      const response = await applicationStepsService.getSurveyAvailabilityCodes();
+      if (!response.success) {
+        throw new Error(
+          response.message || "Failed to fetch survey availability codes"
+        );
+      }
+      return response;
+    },
+    staleTime: 1000 * 60 * 30, // 30 minutes - reference data rarely changes
+  });
+};

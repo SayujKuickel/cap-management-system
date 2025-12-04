@@ -40,8 +40,6 @@ const createAxiosInstance = () =>
 export const axiosDataPublic = createAxiosInstance();
 export const axiosDataPrivate = createAxiosInstance();
 
-type RetryableRequest = InternalAxiosRequestConfig & { _retry?: boolean };
-
 const applyAuthHeader = (
   headers: InternalAxiosRequestConfig["headers"],
   value: string
@@ -85,38 +83,10 @@ const attachAuthInterceptors = (client: AxiosInstance) => {
   client.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
-      const originalRequest = error.config as RetryableRequest;
-
-      if (error.response?.status === 401 && !originalRequest?._retry) {
-        originalRequest._retry = true;
-
-        try {
-          await fetch("/api/auth/session", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ update: true }),
-          });
-
-          const updatedSession = extractTokens(await getSession());
-          const refreshedToken =
-            updatedSession?.accessToken ?? updatedSession?.access_token;
-          const tokenType = updatedSession?.tokenType || "Bearer";
-
-          if (!refreshedToken)
-            throw new Error("Unable to refresh access token");
-
-          originalRequest.headers = applyAuthHeader(
-            originalRequest.headers,
-            `${tokenType} ${refreshedToken}`
-          );
-
-          return client(originalRequest);
-        } catch (refreshError) {
-          await signOut({ redirect: false, callbackUrl: "/login" });
-          if (typeof window !== "undefined") {
-            window.location.href = "/login";
-          }
-          return Promise.reject(refreshError);
+      if (error.response?.status === 401) {
+        await signOut({ redirect: false, callbackUrl: "/login" });
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
         }
       }
 
