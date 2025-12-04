@@ -6,29 +6,32 @@ declare module "next-auth" {
     accessToken?: string;
     refreshToken?: string;
     tokenType?: string;
-    mfaRequired?: boolean;
     user: {
       id?: string | null;
       email?: string | null;
       role?: string;
+      status?: string;
+      rto_profile_id?: string | null;
     };
   }
 
   interface User {
     role?: string;
+    status?: string;
+    rto_profile_id?: string | null;
     accessToken?: string;
     refreshToken?: string;
     tokenType?: string;
-    mfaRequired?: boolean;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     role?: string;
+    status?: string;
+    rto_profile_id?: string | null;
     accessToken?: string;
     refreshToken?: string;
     tokenType?: string;
-    mfaRequired?: boolean;
   }
 }

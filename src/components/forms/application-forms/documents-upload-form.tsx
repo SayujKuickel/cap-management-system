@@ -561,11 +561,16 @@ export default function DocumentsUploadForm() {
                           >
                             {docType.is_mandatory ? "Required" : "Optional"}
                           </Badge>
-                          <Badge className="text-xs">
-                            {docType.ocr_model_ref
-                              ? "Accepts OCR "
-                              : "Does not accept OCR"}
-                          </Badge>
+                          {typeof docType.accepts_ocr === 'boolean' && (
+                            <Badge 
+                              variant={docType.accepts_ocr ? "default" : "secondary"}
+                              className="text-xs"
+                            >
+                              {docType.accepts_ocr
+                                ? "Accepts OCR"
+                                : "No OCR"}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       {hasPersistedFiles && !isUploading && (
