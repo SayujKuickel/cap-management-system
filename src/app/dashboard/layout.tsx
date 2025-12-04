@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import type { ReactNode } from "react";
 
 import AppToolbar from "@/components/dashboard/app-toolbar";
@@ -13,10 +13,8 @@ const getDisplayName = (email: string) => email.split("@")[0] ?? email;
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const { data: session } = useSession();
 
-  console.log(session,"hello world")
-
   // Safely extract the role with type guard and default fallback
-  const userRole = (session?.user?.role as UserRole)
+  const userRole = session?.user?.role as UserRole;
   const userEmail = session?.user?.email ?? "";
 
   // Use the role to get the appropriate nav items
@@ -36,9 +34,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
       <SidebarInset className="bg-background overflow-x-hidden">
         <AppToolbar />
-        <div className="flex-1 p-3 md:p-6 overflow-x-hidden">
-          {children}
-        </div>
+        <div className="flex-1 p-3 md:p-6 overflow-x-hidden">{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

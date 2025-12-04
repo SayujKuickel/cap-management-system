@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Moon, Sun, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { AlertCircle, Bell, CheckCircle2, Info } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -9,15 +9,13 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "../shared/toggle-theme";
 
 const formatSegment = (segment: string) =>
   segment
@@ -160,18 +158,7 @@ const AppToolbar = () => {
       </div>
 
       <div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground"
-          onClick={() => setIsDarkMode(!isDarkMode)}
-        >
-          {isDarkMode ? (
-            <Sun className="h-4 w-4" />
-          ) : (
-            <Moon className="h-4 w-4" />
-          )}
-        </Button>
+        <ThemeToggle />
 
         <Popover>
           <PopoverTrigger asChild>
