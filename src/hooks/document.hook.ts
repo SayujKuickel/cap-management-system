@@ -148,7 +148,7 @@ export const useUploadDocument = () => {
       queryClient.invalidateQueries({
         queryKey: ["autofill-suggestions", variables.application_id],
       });
-      
+
       // If OCR processing was triggered, fetch and populate OCR data
       if (response.data?.process_ocr) {
         // Invalidate OCR query to trigger refetch
