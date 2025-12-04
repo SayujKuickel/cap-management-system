@@ -265,16 +265,7 @@ export function DataTable<TData, TValue>({
       )}
 
       <div className="flex flex-col gap-2 px-1 py-1 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-        <div>
-          {selectedRows > 0 ? (
-            <span>{selectedRows} row(s) selected</span>
-          ) : (
-            <span>
-              Showing {table.getRowModel().rows.length} of {totalRows} record
-              {totalRows === 1 ? "" : "s"}
-            </span>
-          )}
-        </div>
+      
         {enableLocalPagination ? (
           <div className="flex items-center justify-end gap-2">
             <Button

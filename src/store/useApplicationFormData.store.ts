@@ -165,6 +165,8 @@ export const useApplicationFormDataStore = create<FormDataState>()((set, get) =>
 
       // Map API response fields to step IDs
       // Step 2: Personal Details
+
+      console.log("apiResponse.personal_details", apiResponse.personal_details);
       if (apiResponse.personal_details) {
         newStepData[2] = apiResponse.personal_details;
       }
@@ -181,7 +183,7 @@ export const useApplicationFormDataStore = create<FormDataState>()((set, get) =>
 
       // Step 5: Language & Culture
       if (apiResponse.language_cultural_data) {
-        newStepData[5] = apiResponse.language_cultural_data;
+        newStepData[5] = apiResponse.language_cultural;
       }
 
       // Step 6: Disability Support

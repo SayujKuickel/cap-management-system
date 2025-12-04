@@ -62,7 +62,7 @@ export function KanbanColumns({
         items={applicationIds}
         strategy={verticalListSortingStrategy}
       >
-        <div className="space-y-2.5 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+        <div className="space-y-2.5 max-h-[calc(100vh-300px)] overflow-y-auto pr-1 small-sidebar-width">
           {applications.map((app) => (
             <ApplicationCard
               key={app.id}
