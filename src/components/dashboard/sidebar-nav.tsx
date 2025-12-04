@@ -62,7 +62,6 @@ const SidebarNav = ({ items, user }: SidebarNavProps) => {
   const { isMobile, setOpenMobile } = useSidebar();
   const logout = useLogout(siteRoutes.auth.login);
 
- 
   const initials =
     user.name?.[0]?.toUpperCase() ?? user.email[0]?.toUpperCase() ?? "?";
 
