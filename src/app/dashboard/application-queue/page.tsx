@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import useApplications from "@/hooks/useApplications.hook";
 
 const ApplicationQueuePage = () => {
-  
+
   const {
     applications,
     total,
@@ -24,7 +24,7 @@ const ApplicationQueuePage = () => {
       ? "Loading applications..."
       : `Applications (${total ?? 0})`;
 
-  
+
 
   return (
     <section className="space-y-6">
@@ -40,6 +40,9 @@ const ApplicationQueuePage = () => {
         data={applications}
         isLoading={isLoading}
         isFetching={isFetching}
+        isKanban={true}
+        isallowMovingInKanban={true}
+
       />
 
       <div className="flex flex-col gap-3 rounded-md border px-3 py-2 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">

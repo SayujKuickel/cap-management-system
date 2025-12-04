@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Moon, Sun, CheckCircle2, AlertCircle, Info } from "lucide-react";
+import { Bell, CheckCircle2, AlertCircle, Info } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,17 +101,16 @@ const getNotificationColor = (type: NotificationType) => {
 const AppToolbar = () => {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
-  
+
   const unreadCount = notifications.filter((n) => !n.read).length;
-  
+
   const markAsRead = (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
   };
-  
+
   const markAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
@@ -160,18 +160,7 @@ const AppToolbar = () => {
       </div>
 
       <div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground"
-          onClick={() => setIsDarkMode(!isDarkMode)}
-        >
-          {isDarkMode ? (
-            <Sun className="h-4 w-4" />
-          ) : (
-            <Moon className="h-4 w-4" />
-          )}
-        </Button>
+        <ThemeToggle />
 
         <Popover>
           <PopoverTrigger asChild>
@@ -221,7 +210,7 @@ const AppToolbar = () => {
                     {notifications.map((notification, index) => {
                       const Icon = getNotificationIcon(notification.type);
                       const iconColor = getNotificationColor(notification.type);
-                      
+
                       return (
                         <div
                           key={notification.id}

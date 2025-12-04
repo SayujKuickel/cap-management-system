@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import AppToaster from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const Providers = ({ children }: { children: ReactNode }) => {
   const [queryClient] = useState(() => new QueryClient());
@@ -12,11 +13,19 @@ const Providers = ({ children }: { children: ReactNode }) => {
   return (
     <SessionProvider>
       <QueryClientProvider client={queryClient}>
-        {children}
-        <AppToaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <AppToaster />
+        </ThemeProvider>
       </QueryClientProvider>
     </SessionProvider>
   );
 };
 
 export default Providers;
+

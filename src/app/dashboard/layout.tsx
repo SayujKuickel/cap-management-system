@@ -27,7 +27,7 @@ const DashboardLayout = async ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider suppressHydrationWarning>
       {/* Do not add a parent here. will break the ui */}
       <SidebarNav
         items={navItems}
