@@ -62,15 +62,7 @@ const SidebarNav = ({ items, user }: SidebarNavProps) => {
   const { isMobile, setOpenMobile } = useSidebar();
   const logout = useLogout(siteRoutes.auth.login);
 
-  const roleLabel =
-    user.role === "staff"
-      ? "Staff Portal"
-      : user.role === "agent"
-      ? "Agent Portal"
-      : user.role === "student"
-      ? "Student Portal"
-      : "Admin Portal";
-  const roleText = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+ 
   const initials =
     user.name?.[0]?.toUpperCase() ?? user.email[0]?.toUpperCase() ?? "?";
 

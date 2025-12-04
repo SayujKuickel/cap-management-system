@@ -1,47 +1,41 @@
+"use client"
 import type { ReactNode } from "react";
-import { getServerSession } from "next-auth";
 
-import SidebarNav, {
-  type SidebarIconName,
-} from "@/components/dashboard/sidebar-nav";
 import AppToolbar from "@/components/dashboard/app-toolbar";
+import SidebarNav from "@/components/dashboard/sidebar-nav";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import type { UserRole } from "@/lib/auth";
-import { authOptions } from "@/lib/auth-options";
-import { siteRoutes } from "@/constants/site-routes";
 import NAV_LINKS from "@/data/navlink.data";
+import type { UserRole } from "@/lib/auth";
+import { useSession } from "next-auth/react";
 
 const getDisplayName = (email: string) => email.split("@")[0] ?? email;
 
-const DashboardLayout = async ({ children }: { children: ReactNode }) => {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user?.role as UserRole | undefined) ?? "admin";
+const DashboardLayout = ({ children }: { children: ReactNode }) => {
+  const { data: session } = useSession();
 
-  // Route protection is handled by middleware/proxy.ts
-  // No need to check here as proxy will redirect unauthorized access
+  // Safely extract the role with type guard and default fallback
+  const userRole = (session?.user?.role as UserRole)
+  const userEmail = session?.user?.email ?? "";
 
-  const navItems = NAV_LINKS[role] ?? NAV_LINKS.admin;
-
-  if (!session?.user?.email) {
-    return null;
-  }
+  // Use the role to get the appropriate nav items
+  const navItems = NAV_LINKS[userRole] ?? NAV_LINKS.agent;
 
   return (
-    <SidebarProvider>
+    <SidebarProvider suppressHydrationWarning>
       {/* Do not add a parent here. will break the ui */}
       <SidebarNav
         items={navItems}
         user={{
-          email: session.user.email ?? "",
-          name: getDisplayName(session.user.email ?? ""),
-          role,
+          email: userEmail,
+          name: getDisplayName(userEmail),
+          role: userRole,
         }}
       />
 
       <SidebarInset className="bg-background overflow-x-hidden">
         <AppToolbar />
         <div className="flex-1 p-3 md:p-6 overflow-x-hidden">
-          <div className="w-full max-w-full mx-auto">{children}</div>
+          {children}
         </div>
       </SidebarInset>
     </SidebarProvider>
