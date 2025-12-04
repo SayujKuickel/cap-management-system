@@ -189,9 +189,9 @@ export function DataTable<TData, TValue>({
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       </TableHead>
                     );
                   })}
@@ -260,21 +260,14 @@ export function DataTable<TData, TValue>({
         </div>
       ) : (
         <div className="rounded-md border w-full small-sidebar-width ">
-          <ApplicationKanban data={data as Application[]} isallowMovingInKanban={isallowMovingInKanban} />
+          <ApplicationKanban
+            data={data as Application[]}
+            isallowMovingInKanban={isallowMovingInKanban}
+          />
         </div>
       )}
 
       <div className="flex flex-col gap-2 px-1 py-1 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-        <div>
-          {selectedRows > 0 ? (
-            <span>{selectedRows} row(s) selected</span>
-          ) : (
-            <span>
-              Showing {table.getRowModel().rows.length} of {totalRows} record
-              {totalRows === 1 ? "" : "s"}
-            </span>
-          )}
-        </div>
         {enableLocalPagination ? (
           <div className="flex items-center justify-end gap-2">
             <Button
