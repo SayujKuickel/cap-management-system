@@ -25,8 +25,30 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         role: { label: "Role", type: "text" },
+        microsoft_token: { label: "Microsoft Token", type: "text" },
       },
       async authorize(credentials) {
+        // Support Microsoft OAuth tokens (when microsoft_token is provided)
+        if (credentials?.microsoft_token) {
+          try {
+            const tokenData = JSON.parse(credentials.microsoft_token) as LoginResponse;
+            return {
+              id: tokenData.user.id,
+              email: tokenData.user.email,
+              role: tokenData.user.role,
+              status: tokenData.user.status,
+              rto_profile_id: tokenData.user.rto_profile_id,
+              accessToken: tokenData.access_token,
+              refreshToken: tokenData.refresh_token,
+              tokenType: tokenData.token_type,
+            };
+          } catch (error) {
+            console.error("Failed to parse Microsoft token:", error);
+            return null;
+          }
+        }
+
+        // Regular email/password login
         if (!credentials?.email || !credentials.password) return null;
 
         const login = await apiLogin(credentials.email, credentials.password);
