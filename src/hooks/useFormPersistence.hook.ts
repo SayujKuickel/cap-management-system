@@ -39,31 +39,83 @@ export const useFormPersistence = <T extends FieldValues>({
   const lastOcrDataRef = useRef<string | null>(null);
 
   // Load persisted data on mount (using merged data: OCR + user data)
+  // Also reload when stepId changes (navigating to a different step)
   useEffect(() => {
-    if (!enabled || !applicationId || hasLoadedPersistedDataRef.current) {
+    if (!enabled || !applicationId) {
       isInitialLoadRef.current = false;
       return;
     }
 
-    const mergedData = getMergedStepData<T>(stepId);
-    if (mergedData) {
-      try {
-        // Reset form with merged data (OCR + user data)
-        form.reset(mergedData as T);
-        hasLoadedPersistedDataRef.current = true;
-        
-        // Call optional callback
-        if (onDataLoaded) {
-          onDataLoaded(mergedData);
+    // Reset the loaded flag when stepId changes to allow reloading
+    if (hasLoadedPersistedDataRef.current) {
+      // Check if we need to reload (e.g., step changed or OCR data just arrived)
+      const mergedData = getMergedStepData<T>(stepId);
+      const currentValues = form.getValues();
+      const isFormEmpty = Object.values(currentValues).every(
+        (val) => val === null || val === undefined || val === "" || 
+        (Array.isArray(val) && val.length === 0) ||
+        (typeof val === "object" && val !== null && Object.keys(val).length === 0)
+      );
+      
+      // If form is empty but we have data, reload it
+      if (isFormEmpty && mergedData) {
+        try {
+          form.reset(mergedData as T);
+          if (onDataLoaded) {
+            onDataLoaded(mergedData);
+          }
+        } catch (error) {
+          console.error(`[FormPersistence] Failed to reload persisted data for step ${stepId}:`, error);
         }
-      } catch (error) {
-        console.error(`[FormPersistence] Failed to load persisted data for step ${stepId}:`, error);
       }
+      return;
     }
+
+    // Initial load - try to load data, with retry mechanism
+    const loadData = () => {
+      const mergedData = getMergedStepData<T>(stepId);
+      if (mergedData) {
+        try {
+          // Reset form with merged data (OCR + user data)
+          form.reset(mergedData as T);
+          hasLoadedPersistedDataRef.current = true;
+          
+          // Call optional callback
+          if (onDataLoaded) {
+            onDataLoaded(mergedData);
+          }
+        } catch (error) {
+          console.error(`[FormPersistence] Failed to load persisted data for step ${stepId}:`, error);
+        }
+      } else {
+        // No data yet - set up a retry mechanism
+        // This handles cases where OCR data hasn't been fetched yet
+        const retryTimeout = setTimeout(() => {
+          const retryData = getMergedStepData<T>(stepId);
+          if (retryData) {
+            try {
+              form.reset(retryData as T);
+              hasLoadedPersistedDataRef.current = true;
+              if (onDataLoaded) {
+                onDataLoaded(retryData);
+              }
+            } catch (error) {
+              console.error(`[FormPersistence] Failed to load persisted data on retry for step ${stepId}:`, error);
+            }
+          }
+        }, 300); // Retry after 300ms
+        
+        return () => clearTimeout(retryTimeout);
+      }
+    };
+
+    const cleanup = loadData();
     
-    // Mark initial load as complete (whether data was loaded or not)
+    // Mark initial load attempt as complete
     isInitialLoadRef.current = false;
     hasLoadedPersistedDataRef.current = true; // Allow saving even if no persisted data was found
+    
+    return cleanup;
   }, [enabled, applicationId, stepId, form, getMergedStepData, onDataLoaded]);
 
   // Watch for OCR data changes and update form if needed
@@ -73,26 +125,36 @@ export const useFormPersistence = <T extends FieldValues>({
     const stepOcrData = ocrData[stepId];
     const currentOcrDataKey = stepOcrData ? JSON.stringify(stepOcrData) : null;
     
-    // Only update if OCR data for this step has changed
+    // Update if OCR data for this step has changed or just arrived
     if (currentOcrDataKey && currentOcrDataKey !== lastOcrDataRef.current) {
-      const mergedData = getMergedStepData<T>(stepId);
-      if (mergedData) {
-        // Only reset if user hasn't made changes (empty form or matches current)
-        const currentValues = form.getValues();
-        const isFormEmpty = Object.values(currentValues).every(
-          (val) => val === null || val === undefined || val === "" || 
-          (Array.isArray(val) && val.length === 0) ||
-          (typeof val === "object" && Object.keys(val).length === 0)
-        );
-        
-        if (isFormEmpty) {
-          // Form is empty, safe to prefill with OCR data
-          form.reset(mergedData as T);
-          lastOcrDataRef.current = currentOcrDataKey;
+      // Small delay to ensure store has been updated
+      const timeoutId = setTimeout(() => {
+        const mergedData = getMergedStepData<T>(stepId);
+        if (mergedData) {
+          // Only reset if user hasn't made changes (empty form or matches current)
+          const currentValues = form.getValues();
+          const isFormEmpty = Object.values(currentValues).every(
+            (val) => val === null || val === undefined || val === "" || 
+            (Array.isArray(val) && val.length === 0) ||
+            (typeof val === "object" && val !== null && Object.keys(val).length === 0)
+          );
+          
+          if (isFormEmpty) {
+            // Form is empty, safe to prefill with OCR data
+            form.reset(mergedData as T);
+            lastOcrDataRef.current = currentOcrDataKey;
+            
+            // Call callback if provided
+            if (onDataLoaded) {
+              onDataLoaded(mergedData);
+            }
+          }
         }
-      }
+      }, 100); // Small delay to ensure store is updated
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [enabled, applicationId, stepId, form, getMergedStepData, ocrData]);
+  }, [enabled, applicationId, stepId, form, getMergedStepData, ocrData, onDataLoaded]);
 
   // Debounced save function
   const saveStepDataDebounced = useCallback(

@@ -39,6 +39,7 @@ export const useDocumentOcrQuery = (applicationId: string | null) => {
     (state) => state.populateFromOcrResult
   );
   const processedDataRef = useRef<string | null>(null);
+  const lastApplicationIdRef = useRef<string | null>(null);
 
   const query = useQuery<ServiceResponse<OcrResult>, Error>({
     queryKey: ["document-ocr", applicationId],
@@ -51,6 +52,9 @@ export const useDocumentOcrQuery = (applicationId: string | null) => {
       return response;
     },
     enabled: !!applicationId,
+    staleTime: 0, // Always consider data stale to ensure fresh fetches
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     // Poll every 3 seconds if there are pending OCR jobs
     refetchInterval: (query) => {
       const pendingCount = query.state.data?.data?.metadata?.ocr_pending;
@@ -58,17 +62,42 @@ export const useDocumentOcrQuery = (applicationId: string | null) => {
     },
   });
 
-  // When OCR data is fetched, populate the store
+  // Reset processed data ref when applicationId changes
+  useEffect(() => {
+    if (applicationId !== lastApplicationIdRef.current) {
+      processedDataRef.current = null;
+      lastApplicationIdRef.current = applicationId;
+    }
+  }, [applicationId]);
+
+  // When OCR data is fetched, populate the store immediately
   useEffect(() => {
     if (query.data?.data) {
       const dataKey = JSON.stringify(query.data.data);
-      // Only process if data has changed
+      // Always populate if data exists, even if it seems the same
+      // This ensures data is available when navigating to steps
       if (processedDataRef.current !== dataKey) {
+        // Populate immediately
         populateFromOcrResult(query.data.data);
         processedDataRef.current = dataKey;
+      } else {
+        // Even if data key is the same, re-populate to ensure store is up to date
+        // This handles cases where store might have been cleared or reset
+        populateFromOcrResult(query.data.data);
       }
     }
   }, [query.data?.data, populateFromOcrResult]);
+  
+  // Also populate when query becomes successful (even if data hasn't changed)
+  // This ensures data is populated on initial load and after refetch
+  useEffect(() => {
+    if (query.isSuccess && query.data?.data) {
+      // Always populate on success to ensure data is in store
+      const dataKey = JSON.stringify(query.data.data);
+      populateFromOcrResult(query.data.data);
+      processedDataRef.current = dataKey;
+    }
+  }, [query.isSuccess, query.data?.data, populateFromOcrResult]);
 
   return query;
 };

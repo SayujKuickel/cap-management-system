@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 import authService, { type LoginResponse } from "@/service/auth.service";
+import { JWT } from "next-auth/jwt";
 
 export const AUTH_SECRET = process.env.NEXTAUTH_SECRET ?? "dev-secret";
 
@@ -15,6 +16,53 @@ const apiLogin = async (
   }
   return response.data as LoginResponse;
 };
+
+
+async function refreshAccessToken(token: JWT) {
+  try {
+    // API expects refresh_token (not refreshToken)
+    const response = await authService.refreshToken({ 
+      refresh_token: token.refreshToken as string 
+    });
+
+    const refreshedTokens = response.data as LoginResponse;
+
+    if (!response.success || !refreshedTokens) {
+      throw new Error("Failed to refresh token");
+    }
+
+    // Decode JWT to get expiration time (access tokens are JWTs)
+    let accessTokenExpires: number | undefined;
+    try {
+      const payload = JSON.parse(
+        Buffer.from(refreshedTokens.access_token.split(".")[1], "base64").toString()
+      );
+      accessTokenExpires = payload.exp ? payload.exp * 1000 : undefined; // Convert to milliseconds
+    } catch {
+      // If we can't decode, set expiration to 20 minutes from now (default session time)
+      accessTokenExpires = Date.now() + 20 * 60 * 1000;
+    }
+
+    return {
+      ...token,
+      accessToken: refreshedTokens.access_token,
+      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+      tokenType: refreshedTokens.token_type,
+      accessTokenExpires,
+      // Update user info if provided
+      ...(refreshedTokens.user && {
+        sub: refreshedTokens.user.id,
+        email: refreshedTokens.user.email,
+        role: refreshedTokens.user.role,
+        status: refreshedTokens.user.status,
+        rto_profile_id: refreshedTokens.user.rto_profile_id,
+      }),
+    };
+  } catch (error) {
+    console.error("Error refreshing access token", error);
+    return { ...token, error: "RefreshTokenError" };
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   secret: AUTH_SECRET,
@@ -83,16 +131,44 @@ export const authOptions: NextAuthOptions = {
         refreshToken?: string;
         tokenType?: string;
       };
+
+      // Initial sign-in
       if (user) {
         const authUser = user as AuthorizedUser;
-        token.role = authUser.role;
-        token.status = authUser.status;
-        token.rto_profile_id = authUser.rto_profile_id;
-        token.accessToken = authUser.accessToken;
-        token.refreshToken = authUser.refreshToken;
-        token.tokenType = authUser.tokenType;
+        
+        // Decode access token to get expiration time
+        let accessTokenExpires: number | undefined;
+        if (authUser.accessToken) {
+          try {
+            const payload = JSON.parse(
+              Buffer.from(authUser.accessToken.split(".")[1], "base64").toString()
+            );
+            accessTokenExpires = payload.exp ? payload.exp * 1000 : undefined; // Convert to milliseconds
+          } catch {
+            // If we can't decode, set expiration to 20 minutes from now
+            accessTokenExpires = Date.now() + 20 * 60 * 1000;
+          }
+        }
+
+        return {
+          ...token,
+          role: authUser.role,
+          status: authUser.status,
+          rto_profile_id: authUser.rto_profile_id,
+          accessToken: authUser.accessToken,
+          refreshToken: authUser.refreshToken,
+          tokenType: authUser.tokenType,
+          accessTokenExpires,
+        };
       }
-      return token;
+
+      // Return previous token if the access token has not expired yet
+      if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
+        return token;
+      }
+
+      // Access token has expired, try to refresh it
+      return refreshAccessToken(token);
     },
     async session({ session, token }) {
       session.user = {
@@ -106,6 +182,7 @@ export const authOptions: NextAuthOptions = {
       session.accessToken = token.accessToken as string | undefined;
       session.refreshToken = token.refreshToken as string | undefined;
       session.tokenType = token.tokenType as string | undefined;
+      session.error = token.error as string | undefined; // Propagate refresh token errors
       return session;
     },
   },

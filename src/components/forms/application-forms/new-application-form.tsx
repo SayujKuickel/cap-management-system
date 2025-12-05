@@ -1,11 +1,12 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { useCallback } from "react";
 import { toast } from "react-hot-toast";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { APPLICATION_FORM_STEPS } from "./form-step-registry";
 import { TOTAL_APPLICATION_STEPS } from "@/constants/application-steps";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ import { ApplicationFormProvider, useApplicationFormContext } from "@/contexts/A
 
 const NewApplicationForm = () => {
   // Use form context
-  const { currentStep, goToStep, isStepCompleted } = useApplicationFormContext();
+  const { currentStep, goToStep, isStepCompleted, isOcrDataLoading, isOcrDataReady } = useApplicationFormContext();
 
   // Step navigation handler
   const handleStepNavigation = useCallback(
@@ -35,12 +36,25 @@ const NewApplicationForm = () => {
   const currentStepDefinition = APPLICATION_FORM_STEPS[currentStep - 1] ?? null;
   const progress = ((currentStep - 1) / (TOTAL_APPLICATION_STEPS - 1)) * 100;
 
+
   return (
     <div className="mx-auto w-full">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4 lg:items-start">
         {/* Sidebar */}
-        <div className="lg:col-span-1 self-start">
-          <Card className="sticky top-8 z-10">
+        <aside 
+          className="lg:col-span-1"
+          style={{
+            position: 'sticky',
+            top: '24px',
+            alignSelf: 'flex-start',
+            height: 'fit-content',
+            maxHeight: 'calc(100vh - 3rem)',
+            overflowY: 'auto',
+            zIndex: 10,
+          }}
+        >
+          <div>
+          <Card>
             <CardContent className="px-2 py-3">
               <div className="mb-2 border-b pb-2">
                 <Progress value={progress} className="h-1" />
@@ -88,7 +102,8 @@ const NewApplicationForm = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
+          </div>
+        </aside>
 
         {/* Main Content */}
         <div className="lg:col-span-3 space-y-6">
@@ -100,8 +115,24 @@ const NewApplicationForm = () => {
                 </h2>
               </div>
 
-              {currentStepDefinition && (
-                <currentStepDefinition.component />
+              {/* Show loading state while OCR data is being fetched for steps 2-12 */}
+              {isOcrDataLoading || !isOcrDataReady ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Loading extracted data...</span>
+                  </div>
+                  <div className="space-y-3">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                  </div>
+                </div>
+              ) : (
+                currentStepDefinition && (
+                  <currentStepDefinition.component />
+                )
               )}
             </CardContent>
           </Card>

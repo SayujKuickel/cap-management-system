@@ -32,9 +32,9 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         }}
       />
 
-      <SidebarInset className="bg-background overflow-x-hidden">
+      <SidebarInset className="bg-background" style={{ overflow: 'visible' }}>
         <AppToolbar />
-        <div className="flex-1 p-3 md:p-6 overflow-x-hidden">{children}</div>
+        <div className="flex-1 p-3 md:p-6" style={{ overflow: 'visible' }}>{children}</div>
       </SidebarInset>
     </SidebarProvider>
   );

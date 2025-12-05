@@ -247,7 +247,28 @@ export const useApplicationFormDataStore = create<FormDataState>()((set, get) =>
 
       // Step 5: Language & Culture
       if (ocrResult.sections.language_cultural?.extracted_data) {
-        newOcrData[5] = ocrResult.sections.language_cultural.extracted_data;
+        const extractedData = ocrResult.sections.language_cultural.extracted_data;
+        // Transform OCR field names to match form field names
+        if (extractedData && typeof extractedData === 'object' && !Array.isArray(extractedData)) {
+          const dataObj = extractedData as Record<string, unknown>;
+          const transformedData: Record<string, unknown> = { ...dataObj };
+          
+          // Map test_type -> english_test_type
+          if (dataObj.test_type && !dataObj.english_test_type) {
+            transformedData.english_test_type = dataObj.test_type;
+            delete transformedData.test_type;
+          }
+          
+          // Map overall_score -> english_test_score
+          if (dataObj.overall_score && !dataObj.english_test_score) {
+            transformedData.english_test_score = dataObj.overall_score;
+            delete transformedData.overall_score;
+          }
+          
+          newOcrData[5] = transformedData;
+        } else {
+          newOcrData[5] = extractedData;
+        }
       }
 
       // Step 6: Disability Support
@@ -301,14 +322,35 @@ export const useApplicationFormDataStore = create<FormDataState>()((set, get) =>
       }
 
       // Update OCR data and prefill step data if user hasn't filled it yet
+      // Always prefill with OCR data on first load, even if stepData exists but is empty
       const newStepData = { ...state.stepData };
       Object.keys(newOcrData).forEach((stepIdStr) => {
         const stepId = parseInt(stepIdStr, 10);
-        if (!isNaN(stepId) && !newStepData[stepId]) {
-          // User hasn't filled this step, prefill with OCR data
-          newStepData[stepId] = newOcrData[stepId];
+        if (!isNaN(stepId)) {
+          const existingStepData = newStepData[stepId];
+          const ocrDataForStep = newOcrData[stepId];
+          
+          if (!ocrDataForStep) return;
+          
+          // Check if existing step data is empty/null/undefined
+          const isStepDataEmpty = 
+            !existingStepData || 
+            (typeof existingStepData === 'object' && 
+             !Array.isArray(existingStepData) &&
+             existingStepData !== null &&
+             Object.keys(existingStepData).length === 0) ||
+            (Array.isArray(existingStepData) && existingStepData.length === 0);
+          
+          // If no user data exists or it's empty, prefill with OCR data
+          // Force update to ensure data is always available
+          if (isStepDataEmpty) {
+            newStepData[stepId] = ocrDataForStep;
+          }
         }
       });
+      
+      // Force a state update to trigger re-renders in components using this data
+      // This ensures components see the updated data immediately
 
       return {
         ocrData: newOcrData,

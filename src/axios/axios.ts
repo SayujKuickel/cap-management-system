@@ -82,14 +82,20 @@ const attachAuthInterceptors = (client: AxiosInstance) => {
 
   client.interceptors.response.use(
     (response) => response,
-    async (error: AxiosError) => {
-      if (error.response?.status === 401) {
-        await signOut({ redirect: false, callbackUrl: "/login" });
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
-      }
+    async (error) => {
+      const originalRequest = error.config;
+      // Check if the error is due to an expired token and it's not a refresh token request
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
 
+        const session = await getSession(); // This will trigger the jwt callback if token is expired
+        if (session?.accessToken) {
+          originalRequest.headers.Authorization = `Bearer ${session.accessToken}`;
+          return client(originalRequest);
+        }
+        // If refresh failed or no new token, reject the error
+        return Promise.reject(error);
+      }
       return Promise.reject(error);
     }
   );

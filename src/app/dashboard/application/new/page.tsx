@@ -34,7 +34,7 @@ const LoadingFallback = () => {
 
 const NewApplicationPage = () => {
   return (
-    <section className="space-y-6">
+    <section className="space-y-6" style={{ overflow: 'visible', position: 'relative' }}>
       <div>
         <h1 className="text-3xl font-semibold text-foreground">
           New Application
