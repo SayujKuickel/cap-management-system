@@ -118,18 +118,21 @@ const createInitialState = (
   return state;
 };
 
-const hasUploadedFiles = (state: DocumentState): boolean => {
-  return state.files.some((f) => f.uploaded) || state.uploadedFiles.length > 0;
+const hasUploadedFiles = (state: DocumentState | undefined): boolean => {
+  if (!state) return false;
+  return state.files?.some((f) => f.uploaded) || (state.uploadedFiles?.length ?? 0) > 0;
 };
 
 const isAllMandatoryUploaded = (
   documentStates: Record<string, DocumentState>,
   documentTypes: Array<{ id: string; is_mandatory: boolean }>
 ): boolean => {
+  if (!documentTypes || documentTypes.length === 0) return true;
   const mandatoryDocs = documentTypes.filter((doc) => doc.is_mandatory);
+  if (mandatoryDocs.length === 0) return true;
   return mandatoryDocs.every((doc) => {
     const state = documentStates[doc.id];
-    return state && hasUploadedFiles(state);
+    return hasUploadedFiles(state);
   });
 };
 
@@ -215,7 +218,7 @@ export default function DocumentsUploadForm() {
 
   const methods = useForm<DocumentsFormData>({
     defaultValues: { 
-      applicationType: undefined,
+      applicationType: "onshore",
       documents: {} 
     },
   });
@@ -710,11 +713,11 @@ export default function DocumentsUploadForm() {
               uploaded: false,
             };
 
-            const hasFiles = state.files.length > 0;
+            const hasFiles = (state.files?.length || 0) > 0;
             const hasPersistedFiles = (state.uploadedFiles?.length || 0) > 0;
             const allCurrentUploaded =
-              hasFiles && state.files.every((f) => f.uploaded);
-            const isUploading = state.files.some((f) => f.uploading);
+              hasFiles && (state.files?.every((f) => f.uploaded) ?? false);
+            const isUploading = state.files?.some((f) => f.uploading) ?? false;
             const hasAnyUploaded = hasPersistedFiles || allCurrentUploaded;
             
             // Documents in "other" category are always optional, regardless of API flag
@@ -876,10 +879,10 @@ export default function DocumentsUploadForm() {
                         {/* Show current files being uploaded */}
                         {hasFiles && (
                           <>
-                            {state.files
+                            {(state.files || [])
                               .filter(
                                 (f) =>
-                                  !state.uploadedFiles.some(
+                                  !(state.uploadedFiles || []).some(
                                     (uf) =>
                                       uf.fileName === f.file.name &&
                                       uf.fileSize === f.file.size
