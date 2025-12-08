@@ -3,6 +3,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useDocuments, useDocumentTypesQuery, useDocumentOcrQuery } from "@/hooks/document.hook";
 import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 import { cn } from "@/lib/utils";
@@ -18,7 +20,7 @@ import {
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import { Controller, FormProvider, useForm } from "react-hook-form";
 import { toast } from "react-hot-toast";
 import ApplicationStepHeader from "./application-step-header";
 
@@ -43,7 +45,10 @@ type DocumentState = {
   uploaded: boolean;
 };
 
+type ApplicationType = "onshore" | "offshore";
+
 type DocumentsFormData = {
+  applicationType?: ApplicationType;
   documents: Record<
     string,
     {
@@ -55,6 +60,47 @@ type DocumentsFormData = {
 };
 
 const STEP_ID = 1;
+
+// Document category mappings
+const DOCUMENT_CATEGORIES = {
+  onshore: {
+    passport: ["PASSPORT"],
+    academicDocuments: ["TRANSCRIPT_10", "TRANSCRIPT_12"],
+    visa: ["PREVIOUS_VISA"],
+    oshc: ["HEALTH_COVER"],
+  },
+  offshore: {
+    passport: ["PASSPORT"],
+    englishTest: ["ENGLISH_TEST"],
+    academicDocuments: ["TRANSCRIPT_10", "TRANSCRIPT_12"],
+  },
+} as const;
+
+// Helper to get document category
+const getDocumentCategory = (
+  docCode: string,
+  applicationType: ApplicationType
+): string | null => {
+  if (!applicationType) return null;
+
+  const categories = DOCUMENT_CATEGORIES[applicationType];
+  for (const [categoryName, codes] of Object.entries(categories)) {
+    if (codes.includes(docCode as any)) {
+      return categoryName;
+    }
+  }
+  return "other"; // Documents not in specific categories
+};
+
+// Category display names
+const CATEGORY_DISPLAY_NAMES: Record<string, string> = {
+  passport: "Passport",
+  academicDocuments: "Academic Documents",
+  visa: "Visa",
+  oshc: "Overseas Student Health Cover (OSHC)",
+  englishTest: "English Test (IELTS/PTE)",
+  other: "Other Documents",
+};
 
 // Helper Functions
 const createInitialState = (
@@ -168,7 +214,10 @@ export default function DocumentsUploadForm() {
   const shouldSaveRef = useRef(false);
 
   const methods = useForm<DocumentsFormData>({
-    defaultValues: { documents: {} },
+    defaultValues: { 
+      applicationType: undefined,
+      documents: {} 
+    },
   });
 
   // Get persisted data from store
@@ -180,6 +229,11 @@ export default function DocumentsUploadForm() {
     stepId: STEP_ID,
     form: methods,
     onDataLoaded: (data) => {
+      // Restore application type if present
+      if (data?.applicationType) {
+        methods.setValue("applicationType", data.applicationType);
+      }
+      
       // Restore uploaded files from persisted data
       if (data?.documents) {
         setDocumentStates((prev) => {
@@ -208,14 +262,48 @@ export default function DocumentsUploadForm() {
     },
   });
 
-  const mandatoryDocs = useMemo(
-    () => sortedDocumentTypes.filter((doc) => doc.is_mandatory),
-    [sortedDocumentTypes]
-  );
+  // Get application type from form
+  const applicationType = methods.watch("applicationType") as ApplicationType | undefined;
+
+  // Filter and categorize documents based on application type
+  const categorizedDocuments = useMemo(() => {
+    if (!applicationType || !sortedDocumentTypes.length) {
+      return { other: sortedDocumentTypes };
+    }
+
+    const categories: Record<string, typeof sortedDocumentTypes> = {};
+    
+    sortedDocumentTypes.forEach((doc) => {
+      const category = getDocumentCategory(doc.code, applicationType) || "other";
+      if (!categories[category]) {
+        categories[category] = [];
+      }
+      categories[category].push(doc);
+    });
+
+    return categories;
+  }, [applicationType, sortedDocumentTypes]);
+
+  // Get mandatory docs for current application type (excluding "other" category)
+  const mandatoryDocs = useMemo(() => {
+    if (!applicationType) return [];
+    
+    // Only check mandatory documents from specific categories (not "other")
+    const relevantCategories = Object.entries(categorizedDocuments).filter(
+      ([category]) => category !== "other"
+    );
+    const relevantDocs = relevantCategories.flatMap(([, docs]) => docs);
+    
+    // Return only mandatory documents from relevant categories
+    return relevantDocs.filter((doc) => doc.is_mandatory);
+  }, [applicationType, categorizedDocuments]);
 
   const allMandatoryUploaded = useMemo(
-    () => isAllMandatoryUploaded(documentStates, sortedDocumentTypes),
-    [documentStates, sortedDocumentTypes]
+    () => {
+      if (!applicationType) return false;
+      return isAllMandatoryUploaded(documentStates, mandatoryDocs);
+    },
+    [documentStates, mandatoryDocs, applicationType]
   );
 
   const isAnyFileUploading = uploadingFiles.size > 0;
@@ -257,14 +345,19 @@ export default function DocumentsUploadForm() {
 
     const formData = convertToFormData(documentStates);
     methods.setValue("documents", formData.documents);
+    // Ensure applicationType is included in form data
+    const currentApplicationType = methods.getValues("applicationType");
+    if (currentApplicationType) {
+      formData.applicationType = currentApplicationType;
+    }
     
     // Save to Zustand store if flag is set (for immediate saves after upload/remove)
     if (shouldSaveRef.current) {
-      saveOnSubmit(formData);
+      saveOnSubmit({ ...formData, applicationType: currentApplicationType });
       shouldSaveRef.current = false;
     }
 
-    if (isAllMandatoryUploaded(documentStates, sortedDocumentTypes)) {
+    if (applicationType && isAllMandatoryUploaded(documentStates, mandatoryDocs)) {
       markStepCompleted(STEP_ID);
     }
   }, [
@@ -274,6 +367,8 @@ export default function DocumentsUploadForm() {
     markStepCompleted,
     sortedDocumentTypes,
     saveOnSubmit,
+    applicationType,
+    mandatoryDocs,
   ]);
 
   // Handle file upload
@@ -476,7 +571,8 @@ export default function DocumentsUploadForm() {
 
     // Save form data using persistence hook
     const formData = convertToFormData(documentStates);
-    saveOnSubmit(formData);
+    const currentApplicationType = methods.getValues("applicationType");
+    saveOnSubmit({ ...formData, applicationType: currentApplicationType });
 
     markStepCompleted(STEP_ID);
     goToNext();
@@ -528,8 +624,85 @@ export default function DocumentsUploadForm() {
   return (
     <FormProvider {...methods}>
       <form className="space-y-6">
-        <div className="space-y-4">
-          {sortedDocumentTypes.map((docType) => {
+        {/* Application Type Selection */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <div>
+                <Label className="text-base font-semibold mb-3 block">
+                  Application Type
+                </Label>
+                <Controller
+                  name="applicationType"
+                  control={methods.control}
+                  render={({ field }) => (
+                    <RadioGroup
+                      value={field.value || ""}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        // Clear document states when switching types
+                        setDocumentStates({});
+                      }}
+                      className="flex gap-6"
+                    >
+                      <Label className="flex items-center space-x-2 cursor-pointer p-4 rounded-lg border hover:bg-accent">
+                        <RadioGroupItem value="onshore" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">Onshore</span>
+                          <span className="text-xs text-muted-foreground">
+                            Applying from within Australia
+                          </span>
+                        </div>
+                      </Label>
+                      <Label className="flex items-center space-x-2 cursor-pointer p-4 rounded-lg border hover:bg-accent">
+                        <RadioGroupItem value="offshore" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">Offshore</span>
+                          <span className="text-xs text-muted-foreground">
+                            Applying from outside Australia
+                          </span>
+                        </div>
+                      </Label>
+                    </RadioGroup>
+                  )}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Documents by Category */}
+        {!applicationType ? (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Please select an application type to view required documents
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(categorizedDocuments).map(([category, docs]) => {
+              // Skip empty categories
+              if (docs.length === 0) return null;
+
+              return (
+                <div key={category} className="space-y-4">
+                  {/* Category Header */}
+                  <div className="border-b pb-2">
+                    <h3 className="text-lg font-semibold">
+                      {CATEGORY_DISPLAY_NAMES[category] || category}
+                    </h3>
+                    {category === "other" && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Optional documents
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Documents in this category */}
+                  <div className="space-y-4">
+                    {docs.map((docType) => {
             const state = documentStates[docType.id] || {
               documentTypeId: docType.id,
               files: [],
@@ -543,6 +716,10 @@ export default function DocumentsUploadForm() {
               hasFiles && state.files.every((f) => f.uploaded);
             const isUploading = state.files.some((f) => f.uploading);
             const hasAnyUploaded = hasPersistedFiles || allCurrentUploaded;
+            
+            // Documents in "other" category are always optional, regardless of API flag
+            const isOtherCategory = category === "other";
+            const isRequired = !isOtherCategory && docType.is_mandatory;
 
             return (
               <Card key={docType.id}>
@@ -555,11 +732,11 @@ export default function DocumentsUploadForm() {
                         <div className="flex items-center gap-2 mt-1">
                           <Badge
                             variant={
-                              docType.is_mandatory ? "destructive" : "secondary"
+                              isRequired ? "destructive" : "secondary"
                             }
                             className="text-xs"
                           >
-                            {docType.is_mandatory ? "Required" : "Optional"}
+                            {isRequired ? "Required" : "Optional"}
                           </Badge>
                           {typeof docType.accepts_ocr === 'boolean' && (
                             <Badge 
@@ -598,7 +775,7 @@ export default function DocumentsUploadForm() {
                     <div
                       className={cn(
                         "border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer",
-                        docType.is_mandatory && !hasAnyUploaded && !hasFiles
+                        isRequired && !hasAnyUploaded && !hasFiles
                           ? "border-destructive/40"
                           : hasPersistedFiles
                           ? "border-green-500/40 bg-green-50/50"
@@ -773,9 +950,14 @@ export default function DocumentsUploadForm() {
                   </div>
                 </CardContent>
               </Card>
+                    );
+                  })}
+                </div>
+              </div>
             );
-          })}
-        </div>
+            })}
+          </div>
+        )}
 
         {/* Continue Button */}
         <ApplicationStepHeader className="mt-4">
@@ -783,7 +965,7 @@ export default function DocumentsUploadForm() {
             type="button"
             onClick={handleContinue}
             disabled={
-              isAnyFileUploading || !applicationId || !allMandatoryUploaded
+              isAnyFileUploading || !applicationId || !allMandatoryUploaded || !applicationType
             }
           >
             {isAnyFileUploading
