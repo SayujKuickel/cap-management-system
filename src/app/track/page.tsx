@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,20 +10,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import studentService from "@/service/student.service";
 import {
-  Search,
+  AlertCircle,
   Check,
   Clock,
-  Tag,
   FileCheck,
-  DollarSign,
   Hourglass,
   Mail,
-  User,
+  Phone,
+  Search,
+  Tag,
+  User
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import React, { useState } from "react";
+import { toast } from "react-hot-toast";
 
 interface ApplicationProgress {
   id: string;
@@ -32,95 +35,163 @@ interface ApplicationProgress {
   icon: React.ReactNode;
 }
 
-const ApplicationTrack = () => {
-  const [referenceNumber, setReferenceNumber] = useState("CHU-2024-00001");
-  const [trackedApplication, setTrackedApplication] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
+interface StageProgress {
+  stage: string;
+  status: "completed" | "pending" | "in_progress";
+  completed_at: string | null;
+  duration_days: number | null;
+}
 
-  // Dummy data - in real app, this would come from an API
-  const applicationData = {
-    reference: "CHU-2024-00001",
-    status: "UNDER REVIEW",
-    studentName: "Rajesh Kumar Sharma",
-    destination: "Australia",
-    submittedOn: "11/1/2024",
-    course: "Master of Business Administration",
-    intake: "February 2025",
-    lastUpdated: "11/5/2024",
-  };
+interface RequiredDocument {
+  name: string;
+  is_required: boolean;
+  is_uploaded: boolean;
+  uploaded_at: string | null;
+  needs_attention: boolean;
+}
+
+interface TrackApplicationResponse {
+  id: string;
+  course_code: string | null;
+  course_name: string | null;
+  intake: string | null;
+  campus: string | null;
+  tuition_fee: number | null;
+  application_status: string;
+  current_stage: string;
+  completion_percentage: number;
+  submitted_at: string | null;
+  decision_at: string | null;
+  stage_progress: StageProgress[];
+  required_documents: RequiredDocument[];
+  timeline: unknown[];
+  agent_name: string | null;
+  agent_agency: string | null;
+  agent_phone: string | null;
+  assigned_staff_name: string | null;
+  assigned_staff_email: string | null;
+  next_steps: string[];
+}
+
+const STAGE_MAPPING: Record<string, { title: string; description: string; icon: React.ReactNode }> = {
+  draft: {
+    title: "Draft",
+    description: "Application is being prepared",
+    icon: <FileCheck className="size-4" />,
+  },
+  submitted: {
+    title: "Application Submitted",
+    description: "Your application has been received",
+    icon: <FileCheck className="size-4" />,
+  },
+  staff_review: {
+    title: "Under Review",
+    description: "Application is being reviewed by staff",
+    icon: <Clock className="size-4" />,
+  },
+  awaiting_documents: {
+    title: "Awaiting Documents",
+    description: "Additional documents may be required",
+    icon: <FileCheck className="size-4" />,
+  },
+  gs_assessment: {
+    title: "GS Assessment",
+    description: "Genuine Student assessment in progress",
+    icon: <FileCheck className="size-4" />,
+  },
+  offer_generated: {
+    title: "Offer Generated",
+    description: "Conditional offer letter has been generated",
+    icon: <Tag className="size-4" />,
+  },
+  offer_accepted: {
+    title: "Offer Accepted",
+    description: "You have accepted the offer",
+    icon: <Check className="size-4" />,
+  },
+  enrolled: {
+    title: "Enrolled",
+    description: "Confirmation of Enrollment issued",
+    icon: <Check className="size-4" />,
+  },
+};
+
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return dateString;
+  }
+};
+
+const ApplicationTrack = () => {
+  const [applicationId, setApplicationId] = useState("");
+  const [trackedApplication, setTrackedApplication] = useState<TrackApplicationResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleTrack = async () => {
-    if (!referenceNumber.trim()) return;
+    if (!applicationId.trim()) {
+      toast.error("Please enter an application ID");
+      return;
+    }
 
     setIsLoading(true);
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    
-    // Simulate tracking - in real app, this would call an API
-    if (referenceNumber === "CHU-2024-00001" || referenceNumber.trim() !== "") {
-      setTrackedApplication(applicationData);
+    setError(null);
+    setTrackedApplication(null);
+
+    try {
+      const response = await studentService.trackApplication(applicationId.trim());
+      
+      if (response.success && response.data) {
+        setTrackedApplication(response.data as TrackApplicationResponse);
+        toast.success("Application found");
+      } else {
+        throw new Error(response.message || "Failed to fetch application");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to track application";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      setTrackedApplication(null);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  // Auto-load application on mount
-  useEffect(() => {
-    if (referenceNumber) {
-      handleTrack();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const getProgressSteps = (): ApplicationProgress[] => {
+    if (!trackedApplication) return [];
 
-  const progressSteps: ApplicationProgress[] = [
-    {
-      id: "submitted",
-      title: "Application Submitted",
-      description: "Your application has been received",
-      completed: true,
-      icon: <FileCheck className="size-4" />,
-    },
-    {
-      id: "review",
-      title: "Under Review",
-      description: "Application is being reviewed by staff",
-      completed: true,
-      icon: <Clock className="size-4" />,
-    },
-    {
-      id: "offer",
-      title: "Offer Sent",
-      description: "Conditional offer letter has been sent",
-      completed: false,
-      icon: <Tag className="size-4" />,
-    },
-    {
-      id: "gs-assessment",
-      title: "GS Assessment",
-      description: "Genuine Student assessment in progress",
-      completed: false,
-      icon: <FileCheck className="size-4" />,
-    },
-    {
-      id: "fee-payment",
-      title: "Fee Payment",
-      description: "Awaiting tuition fee payment",
-      completed: false,
-      icon: <DollarSign className="size-4" />,
-    },
-    {
-      id: "coe-issued",
-      title: "COE Issued",
-      description: "Confirmation of Enrollment issued",
-      completed: false,
-      icon: <Check className="size-4" />,
-    },
-  ];
+    return trackedApplication.stage_progress.map((stage) => {
+      const stageInfo = STAGE_MAPPING[stage.stage] || {
+        title: stage.stage.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+        description: `Stage: ${stage.stage}`,
+        icon: <Clock className="size-4" />,
+      };
+
+      return {
+        id: stage.stage,
+        title: stageInfo.title,
+        description: stageInfo.description,
+        completed: stage.status === "completed",
+        icon: stageInfo.icon,
+      };
+    });
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !isLoading) {
       handleTrack();
     }
   };
+
+  const progressSteps = getProgressSteps();
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] items-start justify-center py-4 sm:py-6 lg:py-8">
@@ -132,7 +203,7 @@ const ApplicationTrack = () => {
               Track Your Application
             </h1>
             <p className="mx-auto max-w-lg text-sm text-muted-foreground sm:text-base">
-              Enter your reference number to check your application status.
+              Enter your application ID to check your application status.
             </p>
           </div>
 
@@ -140,17 +211,17 @@ const ApplicationTrack = () => {
           <div className="mx-auto flex max-w-xl flex-col gap-3 sm:flex-row">
             <div className="flex-1">
               <Input
-                value={referenceNumber}
-                onChange={(e) => setReferenceNumber(e.target.value)}
+                value={applicationId}
+                onChange={(e) => setApplicationId(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="CHU-2024-00001"
+                placeholder="Enter application ID (e.g., ae2b2118-e38a-49e4-8b8c-07477792817b)"
                 className="w-full"
                 disabled={isLoading}
               />
             </div>
             <Button 
               onClick={handleTrack} 
-              disabled={isLoading}
+              disabled={isLoading || !applicationId.trim()}
               className="w-full sm:w-auto sm:min-w-[120px]"
               size="lg"
             >
@@ -160,9 +231,18 @@ const ApplicationTrack = () => {
           </div>
           
           <p className="text-xs text-muted-foreground sm:text-sm">
-            Your tracking ID was sent to your email when the application was
+            Your application ID was sent to your email when the application was
             submitted.
           </p>
+
+          {error && (
+            <div className="mx-auto max-w-xl rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="size-4" />
+                <p className="text-sm font-medium">{error}</p>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Results - Centered */}
@@ -177,37 +257,76 @@ const ApplicationTrack = () => {
                       Application Details
                     </CardTitle>
                     <CardDescription className="text-sm sm:text-base">
-                      Reference: <span className="font-mono font-semibold">{trackedApplication.reference}</span>
+                      Application ID: <span className="font-mono font-semibold">{trackedApplication.id}</span>
                     </CardDescription>
+                    {trackedApplication.completion_percentage !== undefined && (
+                      <CardDescription className="text-xs">
+                        Completion: {trackedApplication.completion_percentage}%
+                      </CardDescription>
+                    )}
                   </div>
                   <Badge
                     variant="default"
                     className="w-fit bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 dark:bg-blue-500 sm:text-base sm:px-4 sm:py-2"
                   >
-                    {trackedApplication.status}
+                    {trackedApplication.application_status}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="grid gap-6 sm:gap-8 md:grid-cols-2">
                   <div className="space-y-5">
-                    <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
-                      <div className="flex items-center gap-2">
-                        <User className="size-4 text-muted-foreground" />
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
-                          Student Name
+                    {trackedApplication.agent_name && (
+                      <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
+                        <div className="flex items-center gap-2">
+                          <User className="size-4 text-muted-foreground" />
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
+                            Agent
+                          </p>
+                        </div>
+                        <p className="text-base font-semibold text-foreground sm:text-lg">
+                          {trackedApplication.agent_name}
                         </p>
+                        {trackedApplication.agent_agency && (
+                          <p className="text-sm text-muted-foreground">
+                            {trackedApplication.agent_agency}
+                          </p>
+                        )}
+                        {trackedApplication.agent_phone && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Phone className="size-3" />
+                            {trackedApplication.agent_phone}
+                          </div>
+                        )}
                       </div>
-                      <p className="text-base font-semibold text-foreground sm:text-lg">
-                        {trackedApplication.studentName}
-                      </p>
-                    </div>
+                    )}
+                    {trackedApplication.assigned_staff_name && (
+                      <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
+                        <div className="flex items-center gap-2">
+                          <User className="size-4 text-muted-foreground" />
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
+                            Assigned Staff
+                          </p>
+                        </div>
+                        <p className="text-base font-semibold text-foreground sm:text-lg">
+                          {trackedApplication.assigned_staff_name}
+                        </p>
+                        {trackedApplication.assigned_staff_email && (
+                          <a
+                            href={`mailto:${trackedApplication.assigned_staff_email}`}
+                            className="text-sm text-primary hover:underline"
+                          >
+                            {trackedApplication.assigned_staff_email}
+                          </a>
+                        )}
+                      </div>
+                    )}
                     <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
-                        Destination
+                        Current Stage
                       </p>
-                      <p className="text-base font-semibold text-foreground sm:text-lg">
-                        {trackedApplication.destination}
+                      <p className="text-base font-semibold text-foreground sm:text-lg capitalize">
+                        {trackedApplication.current_stage.replace(/_/g, " ")}
                       </p>
                     </div>
                     <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
@@ -215,39 +334,119 @@ const ApplicationTrack = () => {
                         Submitted On
                       </p>
                       <p className="text-base font-semibold text-foreground sm:text-lg">
-                        {trackedApplication.submittedOn}
+                        {formatDate(trackedApplication.submitted_at)}
                       </p>
                     </div>
                   </div>
                   <div className="space-y-5">
-                    <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
-                        Course
-                      </p>
-                      <p className="text-base font-semibold text-foreground sm:text-lg">
-                        {trackedApplication.course}
-                      </p>
-                    </div>
-                    <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
-                        Intake
-                      </p>
-                      <p className="text-base font-semibold text-foreground sm:text-lg">
-                        {trackedApplication.intake}
-                      </p>
-                    </div>
-                    <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
-                        Last Updated
-                      </p>
-                      <p className="text-base font-semibold text-foreground sm:text-lg">
-                        {trackedApplication.lastUpdated}
-                      </p>
-                    </div>
+                    {trackedApplication.course_name && (
+                      <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
+                          Course
+                        </p>
+                        <p className="text-base font-semibold text-foreground sm:text-lg">
+                          {trackedApplication.course_name}
+                        </p>
+                        {trackedApplication.course_code && (
+                          <p className="text-sm text-muted-foreground">
+                            Code: {trackedApplication.course_code}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {trackedApplication.intake && (
+                      <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
+                          Intake
+                        </p>
+                        <p className="text-base font-semibold text-foreground sm:text-lg">
+                          {trackedApplication.intake}
+                        </p>
+                      </div>
+                    )}
+                    {trackedApplication.campus && (
+                      <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
+                          Campus
+                        </p>
+                        <p className="text-base font-semibold text-foreground sm:text-lg">
+                          {trackedApplication.campus}
+                        </p>
+                      </div>
+                    )}
+                    {trackedApplication.tuition_fee !== null && (
+                      <div className="space-y-2 rounded-lg border border-border/50 bg-muted/20 p-4 transition-colors hover:bg-muted/40">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
+                          Tuition Fee
+                        </p>
+                        <p className="text-base font-semibold text-foreground sm:text-lg">
+                          ${trackedApplication.tuition_fee.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Required Documents Card */}
+            {trackedApplication.required_documents && trackedApplication.required_documents.length > 0 && (
+              <Card className="shadow-lg transition-shadow hover:shadow-xl">
+                <CardHeader className="space-y-2">
+                  <CardTitle className="text-xl sm:text-2xl">
+                     Documents
+                  </CardTitle>
+                  <CardDescription className="text-sm sm:text-base">
+                    Status of your application documents
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {trackedApplication.required_documents.map((doc, index) => (
+                      <div
+                        key={index}
+                        className={cn(
+                          "flex items-center justify-between rounded-lg border p-4 transition-colors",
+                          doc.is_uploaded
+                            ? "border-green-500/30 bg-green-50/50"
+                            : doc.is_required
+                            ? "border-destructive/30 bg-destructive/5"
+                            : "border-border/50 bg-muted/20"
+                        )}
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{doc.name}</p>
+                            {doc.is_required && (
+                              <Badge variant="destructive" className="text-xs">
+                                Required
+                              </Badge>
+                            )}
+                            {!doc.is_required && (
+                              <Badge variant="secondary" className="text-xs">
+                                Optional
+                              </Badge>
+                            )}
+                          </div>
+                          {doc.uploaded_at && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Uploaded: {formatDate(doc.uploaded_at)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          {doc.is_uploaded ? (
+                            <Check className="size-5 text-green-600" />
+                          ) : (
+                            <AlertCircle className="size-5 text-muted-foreground" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Application Progress Card */}
             <Card className="shadow-lg transition-shadow hover:shadow-xl">
@@ -261,11 +460,12 @@ const ApplicationTrack = () => {
               </CardHeader>
               <CardContent>
                 <div className="relative py-2">
-                  {progressSteps.map((step, index) => {
-                    const isLast = index === progressSteps.length - 1;
-                    const isCompleted = step.completed;
-                    const isPreviousCompleted =
-                      index > 0 && progressSteps[index - 1].completed;
+                  {progressSteps.length > 0 ? (
+                    progressSteps.map((step, index) => {
+                      const isLast = index === progressSteps.length - 1;
+                      const isCompleted = step.completed;
+                      const isPreviousCompleted =
+                        index > 0 && progressSteps[index - 1].completed;
 
                     return (
                       <div
@@ -321,7 +521,12 @@ const ApplicationTrack = () => {
                         </div>
                       </div>
                     );
-                  })}
+                    })
+                  ) : (
+                    <p className="py-8 text-center text-sm text-muted-foreground">
+                      No progress information available
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -339,13 +544,30 @@ const ApplicationTrack = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <p className="text-base font-semibold text-foreground sm:text-lg">
-                      Your application is under review.
-                    </p>
-                    <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-                      Our team is reviewing your documents. You will be notified
-                      of any updates via email.
-                    </p>
+                    {trackedApplication.next_steps && trackedApplication.next_steps.length > 0 ? (
+                      <ul className="space-y-2">
+                        {trackedApplication.next_steps.map((step, index) => (
+                          <li key={index} className="flex items-start gap-2">
+                            <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                              {index + 1}
+                            </span>
+                            <p className="text-sm leading-relaxed text-foreground sm:text-base">
+                              {step}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <>
+                        <p className="text-base font-semibold text-foreground sm:text-lg">
+                          Your application is under review.
+                        </p>
+                        <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+                          Our team is reviewing your documents. You will be notified
+                          of any updates via email.
+                        </p>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -361,13 +583,35 @@ const ApplicationTrack = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-                      Have questions about your application?{" "}
-                      <span className="font-semibold text-foreground">
-                        Contact your agent
-                      </span>{" "}
-                      or email us at:
-                    </p>
+                    {trackedApplication.agent_name ? (
+                      <>
+                        <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+                          Have questions about your application?{" "}
+                          <span className="font-semibold text-foreground">
+                            Contact your agent
+                          </span>
+                          {trackedApplication.agent_name && (
+                            <span className="block mt-1">
+                              {trackedApplication.agent_name}
+                              {trackedApplication.agent_agency && ` - ${trackedApplication.agent_agency}`}
+                            </span>
+                          )}
+                          {trackedApplication.agent_phone && (
+                            <a
+                              href={`tel:${trackedApplication.agent_phone}`}
+                              className="mt-1 inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                            >
+                              <Phone className="size-3" />
+                              {trackedApplication.agent_phone}
+                            </a>
+                          )}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+                        Have questions about your application? Email us at:
+                      </p>
+                    )}
                     <a
                       href="mailto:admissions@churchill.edu"
                       className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-all hover:bg-primary/20 hover:underline sm:text-base"
