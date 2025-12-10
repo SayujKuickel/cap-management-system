@@ -27,6 +27,8 @@ export default function SchoolingForm() {
     defaultValues: {
       entries: [createEmptySchoolingEntry()],
     },
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence

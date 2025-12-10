@@ -28,7 +28,7 @@ export default function HealthCoverForm() {
   // Load persisted data and merge with defaults BEFORE creating form
   const initialValues = useMemo(() => {
     if (!applicationId) return defaultHealthCoverValues;
-    
+
     const persistedData = getStepData<HealthCoverValues>(stepId);
     if (persistedData) {
       // Merge persisted data with defaults to ensure all fields are present
@@ -40,6 +40,8 @@ export default function HealthCoverForm() {
   const methods = useForm<HealthCoverValues>({
     resolver: zodResolver(healthCoverSchema),
     defaultValues: initialValues,
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence
@@ -53,7 +55,7 @@ export default function HealthCoverForm() {
   // Ensure form is reset with persisted data when component mounts
   useEffect(() => {
     if (!applicationId) return;
-    
+
     const persistedData = getStepData<HealthCoverValues>(stepId);
     if (persistedData) {
       // Reset form with persisted data to ensure all fields are properly set

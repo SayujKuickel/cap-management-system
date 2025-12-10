@@ -37,6 +37,8 @@ export default function SurveyForm() {
     defaultValues: {
       availability_status: "",
     },
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence

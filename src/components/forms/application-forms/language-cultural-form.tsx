@@ -23,6 +23,8 @@ export default function LanguageDefaultForm() {
   const methods = useForm<LanguageAndCultureFormValues>({
     resolver: zodResolver(languageAndCultureSchema),
     defaultValues: defaultLanguageAndCultureValues,
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence

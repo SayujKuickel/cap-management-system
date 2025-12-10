@@ -25,6 +25,8 @@ export default function USIForm() {
   const methods = useForm<USIValues>({
     resolver: zodResolver(usiSchema),
     defaultValues: defaultUSIValues,
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence

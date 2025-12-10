@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 export const serviceSchema = z.object({
-  service_id: z.string().min(1, "Service ID is required"),
-  name: z.string().min(1, "Name is required"),
-  description: z.string().min(1, "Description is required"),
-  fee: z.number().nonnegative("Fee must be zero or positive"),
-  selected: z.boolean(),
+  service_id: z.string().optional().refine((val) => val && val.length > 0, "Service ID is required"),
+  name: z.string().optional().refine((val) => val && val.length > 0, "Name is required"),
+  description: z.string().optional().refine((val) => val && val.length > 0, "Description is required"),
+  fee: z.number().nonnegative("Fee must be zero or positive").optional(),
+  selected: z.boolean().optional(),
 });
 
 export const additionalServicesSchema = z.object({

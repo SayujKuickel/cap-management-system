@@ -26,6 +26,8 @@ export default function PersonalDetailsForm() {
   const methods = useForm<PersonalDetailsValues>({
     resolver: zodResolver(personalDetailsSchema),
     defaultValues: defaultPersonalDetailsValues,
+    mode: "onBlur", // Only validate when field loses focus
+    reValidateMode: "onChange", // Re-validate on change after first blur
   });
 
   // Enable automatic form persistence

@@ -29,6 +29,8 @@ export default function DisabilityForm() {
   const form = useForm<DisabilityFormValues>({
     resolver: zodResolver(disabilitySchema),
     defaultValues: defaultDisabilityValues,
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence

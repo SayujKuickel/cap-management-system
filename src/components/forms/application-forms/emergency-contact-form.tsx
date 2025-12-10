@@ -29,6 +29,8 @@ export default function EmergencyContactForm() {
     defaultValues: {
       contacts: [createEmptyContact()],
     },
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence

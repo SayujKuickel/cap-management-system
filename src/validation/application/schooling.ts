@@ -1,16 +1,14 @@
 import { z } from "zod";
 
 export const schoolingEntrySchema = z.object({
-  institution: z.string().min(1, "Institution is required"),
-  country: z.string().min(1, "Country is required"),
-  qualification_level: z
-    .string()
-    .min(1, "Qualification level is required"),
-  start_year: z.number().int().nonnegative("Start year must be 0 or positive"),
-  end_year: z.number().int().nonnegative("End year must be 0 or positive"),
-  currently_attending: z.boolean(),
-  result: z.string().min(1, "Result is required"),
-  field_of_study: z.string().min(1, "Field of study is required"),
+  institution: z.string().optional().refine((val) => val && val.length > 0, "Institution is required"),
+  country: z.string().optional().refine((val) => val && val.length > 0, "Country is required"),
+  qualification_level: z.string().optional().refine((val) => val && val.length > 0, "Qualification level is required"),
+  start_year: z.number().int().nonnegative("Start year must be 0 or positive").optional(),
+  end_year: z.number().int().nonnegative("End year must be 0 or positive").optional(),
+  currently_attending: z.boolean().optional(),
+  result: z.string().optional().refine((val) => val && val.length > 0, "Result is required"),
+  field_of_study: z.string().optional().refine((val) => val && val.length > 0, "Field of study is required"),
 });
 
 export const schoolingSchema = z.object({

@@ -52,11 +52,11 @@ export const useFormPersistence = <T extends FieldValues>({
       const mergedData = getMergedStepData<T>(stepId);
       const currentValues = form.getValues();
       const isFormEmpty = Object.values(currentValues).every(
-        (val) => val === null || val === undefined || val === "" || 
-        (Array.isArray(val) && val.length === 0) ||
-        (typeof val === "object" && val !== null && Object.keys(val).length === 0)
+        (val) => val === null || val === undefined || val === "" ||
+          (Array.isArray(val) && val.length === 0) ||
+          (typeof val === "object" && val !== null && Object.keys(val).length === 0)
       );
-      
+
       // If form is empty but we have data, reload it
       if (isFormEmpty && mergedData) {
         try {
@@ -79,7 +79,7 @@ export const useFormPersistence = <T extends FieldValues>({
           // Reset form with merged data (OCR + user data)
           form.reset(mergedData as T);
           hasLoadedPersistedDataRef.current = true;
-          
+
           // Call optional callback
           if (onDataLoaded) {
             onDataLoaded(mergedData);
@@ -88,9 +88,12 @@ export const useFormPersistence = <T extends FieldValues>({
           console.error(`[FormPersistence] Failed to load persisted data for step ${stepId}:`, error);
         }
       } else {
-        // No data yet - set up a retry mechanism
+        // No data yet - set up a retry mechanism with multiple attempts
         // This handles cases where OCR data hasn't been fetched yet
-        const retryTimeout = setTimeout(() => {
+        let retryCount = 0;
+        const maxRetries = 3;
+
+        const tryLoadData = () => {
           const retryData = getMergedStepData<T>(stepId);
           if (retryData) {
             try {
@@ -102,19 +105,24 @@ export const useFormPersistence = <T extends FieldValues>({
             } catch (error) {
               console.error(`[FormPersistence] Failed to load persisted data on retry for step ${stepId}:`, error);
             }
+          } else if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(tryLoadData, 500); // Retry every 500ms
           }
-        }, 300); // Retry after 300ms
-        
+        };
+
+        const retryTimeout = setTimeout(tryLoadData, 500); // First retry after 500ms
+
         return () => clearTimeout(retryTimeout);
       }
     };
 
     const cleanup = loadData();
-    
+
     // Mark initial load attempt as complete
     isInitialLoadRef.current = false;
     hasLoadedPersistedDataRef.current = true; // Allow saving even if no persisted data was found
-    
+
     return cleanup;
   }, [enabled, applicationId, stepId, form, getMergedStepData, onDataLoaded]);
 
@@ -124,7 +132,7 @@ export const useFormPersistence = <T extends FieldValues>({
 
     const stepOcrData = ocrData[stepId];
     const currentOcrDataKey = stepOcrData ? JSON.stringify(stepOcrData) : null;
-    
+
     // Update if OCR data for this step has changed or just arrived
     if (currentOcrDataKey && currentOcrDataKey !== lastOcrDataRef.current) {
       // Small delay to ensure store has been updated
@@ -134,16 +142,16 @@ export const useFormPersistence = <T extends FieldValues>({
           // Only reset if user hasn't made changes (empty form or matches current)
           const currentValues = form.getValues();
           const isFormEmpty = Object.values(currentValues).every(
-            (val) => val === null || val === undefined || val === "" || 
-            (Array.isArray(val) && val.length === 0) ||
-            (typeof val === "object" && val !== null && Object.keys(val).length === 0)
+            (val) => val === null || val === undefined || val === "" ||
+              (Array.isArray(val) && val.length === 0) ||
+              (typeof val === "object" && val !== null && Object.keys(val).length === 0)
           );
-          
+
           if (isFormEmpty) {
             // Form is empty, safe to prefill with OCR data
             form.reset(mergedData as T);
             lastOcrDataRef.current = currentOcrDataKey;
-            
+
             // Call callback if provided
             if (onDataLoaded) {
               onDataLoaded(mergedData);
@@ -151,7 +159,7 @@ export const useFormPersistence = <T extends FieldValues>({
           }
         }
       }, 100); // Small delay to ensure store is updated
-      
+
       return () => clearTimeout(timeoutId);
     }
   }, [enabled, applicationId, stepId, form, getMergedStepData, ocrData, onDataLoaded]);
@@ -177,7 +185,7 @@ export const useFormPersistence = <T extends FieldValues>({
   // Watch form values and auto-save (debounced)
   useEffect(() => {
     if (!enabled || !applicationId) return;
-    
+
     // Wait for initial load to complete before starting auto-save
     if (isInitialLoadRef.current) return;
 
@@ -197,12 +205,12 @@ export const useFormPersistence = <T extends FieldValues>({
   const saveOnSubmit = useCallback(
     (values: T) => {
       if (!enabled || !applicationId) return values;
-      
+
       // Clear any pending debounced save
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
-      
+
       setStepData(stepId, values);
       return values;
     },

@@ -1,13 +1,17 @@
 import { z } from "zod";
 
 export const healthCoverSchema = z.object({
-  provider: z.string().min(1, "Provider is required"),
-  policy_number: z.string().min(1, "Policy number is required"),
-  start_date: z.string().min(1, "Start date is required"),
-  end_date: z.string().min(1, "End date is required"),
-  coverage_type: z.string().min(1, "Coverage type is required"),
-  cost: z.number().nonnegative("Cost must be zero or positive"),
+  provider: z.string().optional().refine((val) => val && val.length > 0, "Provider is required"),
+  policy_number: z.string().optional().refine((val) => val && val.length > 0, "Policy number is required"),
+  start_date: z.string().optional().refine((val) => val && val.length > 0, "Start date is required"),
+  end_date: z.string().optional().refine((val) => val && val.length > 0, "End date is required"),
+  coverage_type: z.string().optional().refine((val) => val && val.length > 0, "Coverage type is required"),
+  cost: z.number().nonnegative("Cost must be zero or positive").optional(),
 }).superRefine((val, ctx) => {
+  if (!val.start_date || !val.end_date) {
+    return; // Skip validation if dates are not provided
+  }
+
   const start = new Date(val.start_date);
   const end = new Date(val.end_date);
 

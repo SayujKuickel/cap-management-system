@@ -60,28 +60,44 @@ export const ApplicationFormProvider: React.FC<{
     (state) => state.initializeStep
   );
 
-  // Zustand store for form data
+
   const setStepData = useApplicationFormDataStore((state) => state.setStepData);
   const getStepData = useApplicationFormDataStore((state) => state.getStepData);
 
-  // API hooks
+
   const createApplication = useApplicationCreateMutation();
   const { mutate: fetchApplication, isPending: isFetchingApplication } =
     useApplicationGetMutation(applicationId);
 
-  // Always fetch OCR data when applicationId is available (for all steps)
-  // This ensures OCR data is available when navigating to any step
+
   const ocrQuery = useDocumentOcrQuery(applicationId);
 
-  // For steps 2-12, we need OCR data to be ready before showing the form
-  const needsOcrData = currentStep >= 2 && currentStep <= 12;
-  const isOcrDataLoading = needsOcrData && (ocrQuery.isFetching || ocrQuery.isLoading);
 
-  // Watch OCR data in store to determine if it's ready
+  const needsOcrData = currentStep >= 2 && currentStep <= 12;
+
+
+  const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false);
+
+
+  const isOcrDataLoading = needsOcrData && !hasLoadedOnce && (ocrQuery.isFetching || ocrQuery.isLoading);
+
+
   const ocrData = useApplicationFormDataStore((state) => state.ocrData);
   const lastRefetchedStepRef = React.useRef<number | null>(null);
 
-  // Determine if OCR data is ready based on query state and store state
+
+  useEffect(() => {
+    if (ocrQuery.isSuccess && ocrQuery.data?.data) {
+      setHasLoadedOnce(true);
+    }
+  }, [ocrQuery.isSuccess, ocrQuery.data]);
+
+
+  useEffect(() => {
+    setHasLoadedOnce(false);
+  }, [applicationId]);
+
+
   const isOcrDataReady = React.useMemo(() => {
     if (!needsOcrData) {
       // Step 1 doesn't need OCR data
@@ -92,12 +108,17 @@ export const ApplicationFormProvider: React.FC<{
       return false;
     }
 
-    // If query is still loading/fetching, not ready yet
+
+    if (hasLoadedOnce) {
+      return true;
+    }
+
+
     if (ocrQuery.isFetching || ocrQuery.isLoading) {
       return false;
     }
 
-    // If query succeeded and we have data in the response
+
     if (ocrQuery.isSuccess && ocrQuery.data?.data) {
       // Check if data has been populated into store
       const hasOcrDataInStore = Object.keys(ocrData).length > 0;
@@ -111,7 +132,7 @@ export const ApplicationFormProvider: React.FC<{
 
     // Default: not ready
     return false;
-  }, [needsOcrData, applicationId, ocrQuery.isFetching, ocrQuery.isLoading, ocrQuery.isSuccess, ocrQuery.data, ocrQuery.isError, ocrData]);
+  }, [needsOcrData, applicationId, hasLoadedOnce, ocrQuery.isFetching, ocrQuery.isLoading, ocrQuery.isSuccess, ocrQuery.data, ocrQuery.isError, ocrData]);
 
   // Force refetch OCR data when navigating to steps that might need it (steps 2-12)
   useEffect(() => {
@@ -119,11 +140,11 @@ export const ApplicationFormProvider: React.FC<{
       // Only refetch if we haven't already refetched for this step
       if (lastRefetchedStepRef.current !== currentStep) {
         lastRefetchedStepRef.current = currentStep;
-        
+
         // Check if we already have OCR data in store
         const store = useApplicationFormDataStore.getState();
         const hasOcrData = Object.keys(store.ocrData).length > 0;
-        
+
         if (!hasOcrData || !ocrQuery.data?.data) {
           // Need to fetch OCR data
           ocrQuery.refetch().catch((error) => {
@@ -147,19 +168,19 @@ export const ApplicationFormProvider: React.FC<{
       // Set application ID in store
       const store = useApplicationFormDataStore.getState();
       const currentStoreAppId = store.applicationId;
-      
+
       // If this is a different application, clear the data and start fresh
       if (currentStoreAppId && currentStoreAppId !== applicationId) {
         store.clearAllData();
         goToStep(1);
       }
-      
+
       store.setApplicationId(applicationId);
-      
+
       // Check if there's any step data - if not, it's a new application
       const stepData = store.stepData;
       const hasAnyData = Object.keys(stepData).length > 0;
-      
+
       if (!hasAnyData) {
         // New application with no data - start at step 1
         goToStep(1);
@@ -167,7 +188,7 @@ export const ApplicationFormProvider: React.FC<{
         // Existing application with data - initialize based on progress
         initializeStep(applicationId);
       }
-      
+
       fetchApplication();
     }
   }, [applicationId, initializeStep, goToStep]);

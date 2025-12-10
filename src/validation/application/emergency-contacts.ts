@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 export const contactSchema = z.object({
-  name: z.string().min(1, "Please enter a contact name"),
-  relationship: z.string().min(1, "Please describe the relationship"),
-  phone: z.string().min(1, "Phone number is required"),
-  email: z.string().email("Enter a valid email address"),
-  address: z.string().min(1, "Address is required"),
-  is_primary: z.boolean(),
+  name: z.string().optional().refine((val) => val && val.length > 0, "Please enter a contact name"),
+  relationship: z.string().optional().refine((val) => val && val.length > 0, "Please describe the relationship"),
+  phone: z.string().optional().refine((val) => val && val.length > 0, "Phone number is required"),
+  email: z.string().optional().refine((val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), "Enter a valid email address").refine((val) => val && val.length > 0, "Email is required"),
+  address: z.string().optional().refine((val) => val && val.length > 0, "Address is required"),
+  is_primary: z.boolean().optional(),
 });
 
 export const emergencyContactsSchema = z.object({

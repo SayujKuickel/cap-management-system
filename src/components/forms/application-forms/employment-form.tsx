@@ -27,6 +27,8 @@ export default function EmploymentForm() {
     defaultValues: {
       entries: [createEmptyEmploymentEntry()],
     },
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence

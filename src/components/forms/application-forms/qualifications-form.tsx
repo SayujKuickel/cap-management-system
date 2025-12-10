@@ -27,6 +27,8 @@ export default function QualificationsForm() {
     defaultValues: {
       qualifications: [createEmptyQualification()],
     },
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence

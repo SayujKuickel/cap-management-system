@@ -28,6 +28,8 @@ export default function AdditionalServicesForm() {
     defaultValues: {
       services: [createEmptyAdditionalService()],
     },
+    mode: "onBlur",
+    reValidateMode: "onChange",
   });
 
   // Enable automatic form persistence
