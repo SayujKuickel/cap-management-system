@@ -21,8 +21,8 @@ const apiLogin = async (
 async function refreshAccessToken(token: JWT) {
   try {
     // API expects refresh_token (not refreshToken)
-    const response = await authService.refreshToken({ 
-      refresh_token: token.refreshToken as string 
+    const response = await authService.refreshToken({
+      refresh_token: token.refreshToken as string
     });
 
     const refreshedTokens = response.data as LoginResponse;
@@ -135,7 +135,7 @@ export const authOptions: NextAuthOptions = {
       // Initial sign-in
       if (user) {
         const authUser = user as AuthorizedUser;
-        
+
         // Decode access token to get expiration time
         let accessTokenExpires: number | undefined;
         if (authUser.accessToken) {
@@ -185,5 +185,9 @@ export const authOptions: NextAuthOptions = {
       session.error = token.error as string | undefined; // Propagate refresh token errors
       return session;
     },
+  },
+  pages: {
+
+    error: '/error',
   },
 };
