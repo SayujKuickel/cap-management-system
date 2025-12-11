@@ -9,6 +9,10 @@ import {
   useApplicationGetMutation,
 } from "@/hooks/useApplication.hook";
 
+// ⚠️ TESTING MODE: Set to 'true' to allow free navigation during testing
+// Set to 'false' in production to enforce step completion before navigation
+const TESTING_MODE = true;
+
 type ApplicationFormContextType = {
   applicationId: string | null;
   currentStep: number;
@@ -88,16 +92,21 @@ export const ApplicationFormProvider: React.FC<{
 
       store.setApplicationId(applicationId);
 
-      // Check if there's any step data - if not, it's a new application
-      const stepData = store.stepData;
-      const hasAnyData = Object.keys(stepData).length > 0;
-
-      if (!hasAnyData) {
-        // New application with no data - start at step 1
+      // In testing mode, always start at step 1 for free navigation
+      if (TESTING_MODE) {
         goToStep(1);
       } else {
-        // Existing application with data - initialize based on progress
-        initializeStep(applicationId);
+        // Check if there's any step data - if not, it's a new application
+        const stepData = store.stepData;
+        const hasAnyData = Object.keys(stepData).length > 0;
+
+        if (!hasAnyData) {
+          // New application with no data - start at step 1
+          goToStep(1);
+        } else {
+          // Existing application with data - initialize based on progress
+          initializeStep(applicationId);
+        }
       }
 
       fetchApplication();

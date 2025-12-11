@@ -33,7 +33,7 @@ export function FormRadio({ name, label, options }: FormRadioProps) {
             {options.map((option) => (
               <Label
                 key={option}
-                className="flex items-center space-x-2 cursor-pointer"
+                className="flex items-center space-x-2 cursor-pointer font-normal"
               >
                 <RadioGroupItem value={option} />
                 <span>{option}</span>

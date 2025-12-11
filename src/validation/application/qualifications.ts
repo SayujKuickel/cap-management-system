@@ -10,15 +10,27 @@ export const qualificationSchema = z.object({
 });
 
 export const qualificationsSchema = z.object({
-  qualifications: z
-    .array(qualificationSchema)
-    .min(1, "Add at least one qualification"),
+  has_qualifications: z.enum(["Yes", "No"]),
+  qualifications: z.array(qualificationSchema).optional(),
+}).superRefine((val, ctx) => {
+  if (val.has_qualifications === "Yes") {
+    if (!val.qualifications || val.qualifications.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["qualifications"],
+        message: "Add at least one qualification",
+      });
+    }
+    // Also validate individual entries if needed, but existing refined items handle their own validation
+    // However, if the array exists, Zod will validate standard object schema inside. 
+    // The issue is if the user adds an empty one. The existing schema validator handles empty string checks.
+  }
 });
 
 export type QualificationsFormValues = z.infer<typeof qualificationsSchema>;
 
 export const createEmptyQualification =
-  (): QualificationsFormValues["qualifications"][number] => ({
+  (): unknown => ({ // flexible return type to match structure
     qualification_name: "",
     institution: "",
     completion_date: "",
@@ -26,3 +38,8 @@ export const createEmptyQualification =
     field_of_study: "",
     grade: "",
   });
+
+export const defaultQualificationsValues: QualificationsFormValues = {
+  has_qualifications: "No",
+  qualifications: [],
+};

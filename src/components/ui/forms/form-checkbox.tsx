@@ -30,7 +30,7 @@ export function FormCheckbox({ name, label }: FormCheckboxProps) {
         )}
       />
 
-      <Label className="cursor-pointer select-none" htmlFor={name}>
+      <Label className="cursor-pointer select-none font-normal" htmlFor={name}>
         {label}
       </Label>
 

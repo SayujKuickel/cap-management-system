@@ -2,6 +2,10 @@ import { create } from "zustand";
 import { TOTAL_APPLICATION_STEPS } from "@/constants/application-steps";
 import { useApplicationFormDataStore } from "./useApplicationFormData.store";
 
+// ⚠️ TESTING MODE: Set to 'true' to allow free navigation during testing
+// Set to 'false' in production to enforce step completion before navigation
+const TESTING_MODE = true;
+
 type ApplicationStepState = {
   currentStep: number;
   totalSteps: number;
@@ -22,6 +26,11 @@ const getInitialStep = (
   applicationId: string | null,
   stepData: Record<number, unknown>
 ): number => {
+  // In testing mode, always allow starting at step 1
+  if (TESTING_MODE) {
+    return 1;
+  }
+
   if (!applicationId) return 1;
 
   try {

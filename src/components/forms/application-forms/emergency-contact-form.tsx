@@ -66,8 +66,7 @@ export default function EmergencyContactForm() {
           emergencyContactMutation.mutate(values);
         })}
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Emergency Contacts</h3>
+        <div className="flex items-center justify-end">
 
           <Button
             type="button"

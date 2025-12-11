@@ -11,6 +11,10 @@ import { TOTAL_APPLICATION_STEPS } from "@/constants/application-steps";
 import { cn } from "@/lib/utils";
 import { ApplicationFormProvider, useApplicationFormContext } from "@/contexts/ApplicationFormContext";
 
+// ⚠️ TESTING MODE: Set to 'true' to allow free navigation during testing
+// Set to 'false' in production to enforce step completion before navigation
+const TESTING_MODE = true;
+
 const NewApplicationForm = () => {
   // Use form context
   const { currentStep, goToStep, isStepCompleted } = useApplicationFormContext();
@@ -20,8 +24,8 @@ const NewApplicationForm = () => {
     (stepId: number) => {
       const movingForward = stepId > currentStep;
 
-      // Block forward navigation if current step isn't completed
-      if (movingForward && !isStepCompleted(currentStep)) {
+      // Block forward navigation if current step isn't completed (only in production mode)
+      if (!TESTING_MODE && movingForward && !isStepCompleted(currentStep)) {
         toast.error("Please complete this step before continuing.");
         return;
       }

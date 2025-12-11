@@ -5,9 +5,9 @@ import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Button } from "@/components/ui/button";
-import { FormInput } from "../../ui/forms/form-input";
 import { FormCheckbox } from "../../ui/forms/form-checkbox";
-import { FormSelect } from "../../ui/forms/form-select";
+import { FormRadio } from "../../ui/forms/form-radio";
+import { Separator } from "@/components/ui/separator";
 
 import {
   disabilitySchema,
@@ -26,7 +26,7 @@ export default function DisabilityForm() {
   const stepId = 5; // Disability is step 5
   const disabilityMutation = useApplicationStepMutations(applicationId)[stepId];
 
-  const form = useForm<DisabilityFormValues>({
+  const methods = useForm<DisabilityFormValues>({
     resolver: zodResolver(disabilitySchema),
     defaultValues: defaultDisabilityValues,
     mode: "onBlur",
@@ -37,39 +37,31 @@ export default function DisabilityForm() {
   const { saveOnSubmit } = useFormPersistence({
     applicationId,
     stepId,
-    form: form,
+    form: methods,
     enabled: !!applicationId,
   });
 
   const hasDisability = useWatch({
-    control: form.control,
+    control: methods.control,
     name: "has_disability",
   });
-  const hasDocumentation = useWatch({
-    control: form.control,
-    name: "has_documentation",
-  });
 
+  // Reset disability checkboxes when "No" is selected
   useEffect(() => {
-    if (!hasDisability) {
-      form.setValue("disability_type", "");
-      form.setValue("disability_details", "");
-      form.setValue("support_required", "");
-      form.setValue("has_documentation", false);
-      form.setValue("documentation_status", "");
-      form.setValue("adjustments_needed", "");
+    if (hasDisability === "No") {
+      methods.setValue("disability_hearing", false);
+      methods.setValue("disability_physical", false);
+      methods.setValue("disability_intellectual", false);
+      methods.setValue("disability_learning", false);
+      methods.setValue("disability_mental_illness", false);
+      methods.setValue("disability_acquired_brain", false);
+      methods.setValue("disability_vision", false);
+      methods.setValue("disability_medical_condition", false);
+      methods.setValue("disability_other", false);
     }
-  }, [hasDisability, form]);
-
-  useEffect(() => {
-    if (!hasDocumentation) {
-      form.setValue("documentation_status", "");
-      form.setValue("adjustments_needed", "");
-    }
-  }, [hasDocumentation, form]);
+  }, [hasDisability, methods]);
 
   const onSubmit = (values: DisabilityFormValues) => {
-    // Save to Zustand store before submitting to API
     if (applicationId) {
       saveOnSubmit(values);
     }
@@ -78,64 +70,41 @@ export default function DisabilityForm() {
   };
 
   return (
-    <FormProvider {...form}>
-      <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="space-y-4">
-          <FormCheckbox
-            name="has_disability"
-            label="I have a disability, impairment, or long-term condition"
-          />
-
-          {hasDisability && (
-            <>
-              <FormInput
-                name="disability_type"
-                label="Disability Type"
-                placeholder="e.g., Vision, Physical, Learning"
+    <FormProvider {...methods}>
+      <form className="space-y-8" onSubmit={methods.handleSubmit(onSubmit)}>
+        <section className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm mb-3">
+                Do you consider yourself to have a disability, impairment or long-term condition?
+              </p>
+              <FormRadio
+                name="has_disability"
+                label=""
+                options={["Yes", "No"]}
               />
+            </div>
 
-              <FormInput
-                name="disability_details"
-                label="Disability Details"
-                placeholder="Provide details about your condition"
-              />
+            {hasDisability === "Yes" && (
+              <div className="space-y-3 mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <p className="text-sm">If Yes, select the below list.</p>
+                <div className="space-y-3 pl-1">
+                  <FormCheckbox name="disability_hearing" label="Hearing/deaf" />
+                  <FormCheckbox name="disability_physical" label="Physical" />
+                  <FormCheckbox name="disability_intellectual" label="Intellectual" />
+                  <FormCheckbox name="disability_learning" label="Learning" />
+                  <FormCheckbox name="disability_mental_illness" label="Mental illness" />
+                  <FormCheckbox name="disability_acquired_brain" label="Acquired brain impairment" />
+                  <FormCheckbox name="disability_vision" label="Vision" />
+                  <FormCheckbox name="disability_medical_condition" label="Medical condition-18" />
+                  <FormCheckbox name="disability_other" label="Other-19" />
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
-              <FormInput
-                name="support_required"
-                label="Support Required"
-                placeholder="What support do you require?"
-              />
-
-              <FormCheckbox
-                name="has_documentation"
-                label="I have documentation"
-              />
-
-              {hasDocumentation && (
-                <>
-                  <FormSelect
-                    name="documentation_status"
-                    label="Documentation Status"
-                    placeholder="Select documentation status"
-                    options={[
-                      { value: "pending", label: "Pending" },
-                      { value: "submitted", label: "Submitted" },
-                      { value: "not_available", label: "Not available" },
-                    ]}
-                  />
-
-                  <FormInput
-                    name="adjustments_needed"
-                    label="Adjustments Needed"
-                    placeholder="Enter adjustments separated by commas (e.g., Extra time, Quiet room, Assistive technology)"
-                  />
-                </>
-              )}
-            </>
-          )}
-        </div>
-
-        <ApplicationStepHeader className="mt-4">
+        <ApplicationStepHeader className="mt-8 pt-6 border-t">
           <Button type="submit" disabled={disabilityMutation.isPending}>
             {disabilityMutation.isPending ? "Saving..." : "Save & Continue"}
           </Button>

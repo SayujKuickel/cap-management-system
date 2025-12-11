@@ -1,10 +1,13 @@
 "use client";
 
-import { useForm, useFieldArray, FormProvider } from "react-hook-form";
+import { useForm, useFieldArray, FormProvider, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { FormInput } from "../../ui/forms/form-input";
+import { FormRadio } from "../../ui/forms/form-radio";
 import { useSearchParams } from "next/navigation";
 import { useApplicationStepMutations } from "@/hooks/useApplicationSteps.hook";
 import ApplicationStepHeader from "./application-step-header";
@@ -12,6 +15,7 @@ import {
   createEmptyQualification,
   qualificationsSchema,
   type QualificationsFormValues,
+  defaultQualificationsValues,
 } from "@/validation/application/qualifications";
 import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 
@@ -24,9 +28,7 @@ export default function QualificationsForm() {
 
   const methods = useForm<QualificationsFormValues>({
     resolver: zodResolver(qualificationsSchema),
-    defaultValues: {
-      qualifications: [createEmptyQualification()],
-    },
+    defaultValues: defaultQualificationsValues,
     mode: "onBlur",
     reValidateMode: "onChange",
   });
@@ -46,10 +48,23 @@ export default function QualificationsForm() {
     name: "qualifications",
   });
 
+  const hasQualifications = useWatch({
+    control,
+    name: "has_qualifications",
+  });
+
+  // Reset qualifications when "No" is selected
+  useEffect(() => {
+    if (hasQualifications === "No") {
+      methods.setValue("qualifications", []);
+    } else if (hasQualifications === "Yes" && fields.length === 0) {
+      append(createEmptyQualification() as any);
+    }
+  }, [hasQualifications, methods, fields.length, append]);
+
   const canAddMore = fields.length < 10;
 
   const onSubmit = (values: QualificationsFormValues) => {
-    // Save to Zustand store before submitting to API
     if (applicationId) {
       saveOnSubmit(values);
     }
@@ -58,82 +73,99 @@ export default function QualificationsForm() {
 
   return (
     <FormProvider {...methods}>
-      <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Previous Qualifications</h3>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={!canAddMore}
-            onClick={() => append(createEmptyQualification())}
-          >
-            Add Qualification
-          </Button>
-        </div>
+      <form className="space-y-8" onSubmit={handleSubmit(onSubmit)}>
+        <section className="space-y-6">
+          <div className="space-y-6">
+            <div>
+              <p className="text-sm mb-3">Have you successfully completed any previous qualifications?</p>
+              <FormRadio
+                name="has_qualifications"
+                label=""
+                options={["Yes", "No"]}
+              />
+            </div>
 
-        <div className="space-y-4">
-          {fields.map((field, index) => (
-            <div key={field.id} className="space-y-4 rounded-lg border p-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">
-                  Qualification {index + 1}
-                </p>
-
-                {fields.length > 1 && (
+            {hasQualifications === "Yes" && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm">Qualifications List</h4>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => remove(index)}
+                    disabled={!canAddMore}
+                    onClick={() => append(createEmptyQualification() as any)}
                   >
-                    Remove
+                    Add Qualification
                   </Button>
-                )}
+                </div>
+
+                <div className="space-y-6">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="space-y-4 rounded-lg border p-4 bg-muted/5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm">
+                          Qualification {index + 1}
+                        </p>
+
+                        {fields.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => remove(index)}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <FormInput
+                          name={`qualifications.${index}.qualification_name`}
+                          label="Qualification Name"
+                          placeholder="e.g. Bachelor of IT"
+                        />
+
+                        <FormInput
+                          name={`qualifications.${index}.institution`}
+                          label="Institution"
+                          placeholder="e.g. XYZ University"
+                        />
+
+                        <FormInput
+                          name={`qualifications.${index}.field_of_study`}
+                          label="Field of Study"
+                          placeholder="e.g. Software Engineering"
+                        />
+
+                        <FormInput
+                          name={`qualifications.${index}.grade`}
+                          label="Grade"
+                          placeholder="e.g. Distinction"
+                        />
+
+                        <FormInput
+                          name={`qualifications.${index}.completion_date`}
+                          label="Completion Date"
+                          type="date"
+                        />
+
+                        <FormInput
+                          name={`qualifications.${index}.certificate_number`}
+                          label="Certificate Number"
+                          placeholder="e.g. CERT-123456"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+          </div>
+        </section>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <FormInput
-                  name={`qualifications.${index}.qualification_name`}
-                  label="Qualification Name"
-                  placeholder="e.g. Bachelor of IT"
-                />
-
-                <FormInput
-                  name={`qualifications.${index}.institution`}
-                  label="Institution"
-                  placeholder="e.g. XYZ University"
-                />
-
-                <FormInput
-                  name={`qualifications.${index}.field_of_study`}
-                  label="Field of Study"
-                  placeholder="e.g. Software Engineering"
-                />
-
-                <FormInput
-                  name={`qualifications.${index}.grade`}
-                  label="Grade"
-                  placeholder="e.g. Distinction"
-                />
-
-                <FormInput
-                  name={`qualifications.${index}.completion_date`}
-                  label="Completion Date"
-                  type="date"
-                />
-
-                <FormInput
-                  name={`qualifications.${index}.certificate_number`}
-                  label="Certificate Number"
-                  placeholder="e.g. CERT-123456"
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <ApplicationStepHeader className="mt-4">
+        <ApplicationStepHeader className="mt-8 pt-6 border-t">
           <Button
             type="submit"
             disabled={qualificationsMutation.isPending}
