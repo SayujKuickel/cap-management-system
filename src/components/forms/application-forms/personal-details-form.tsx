@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FormInput } from "../../ui/forms/form-input";
 import { FormRadio } from "../../ui/forms/form-radio";
+import { FormTextarea } from "../../ui/forms/form-textarea";
+import { FormSelect } from "../../ui/forms/form-select";
+import { FormSearchableSelect } from "../../ui/forms/form-searchable-select";
 import { useSearchParams } from "next/navigation";
 import { useApplicationStepMutations } from "@/hooks/useApplicationSteps.hook";
 import {
@@ -23,6 +26,7 @@ import { useDocuments, useDocumentTypesQuery } from "@/hooks/document.hook";
 import documentService from "@/service/document.service";
 import { toast } from "react-hot-toast";
 import { cn } from "@/lib/utils";
+import { getCountriesList, getNationalitiesList } from "@/data/country-list";
 
 export default function PersonalDetailsForm() {
   const searchParams = useSearchParams();
@@ -280,9 +284,9 @@ export default function PersonalDetailsForm() {
 
   return (
     <FormProvider {...methods}>
-      <form className="space-y-8" onSubmit={methods.handleSubmit(onSubmit)}>
+      <form className="space-y-10" onSubmit={methods.handleSubmit(onSubmit)}>
         {/* Passport Upload Section */}
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="border-primary/20 bg-primary/5 shadow-sm">
           <CardContent className="p-4">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -385,106 +389,352 @@ export default function PersonalDetailsForm() {
           </CardContent>
         </Card>
 
-        <section className="space-y-4">
-          <div>
-            <h3 className="mb-1 font-medium">Personal Information</h3>
-            <Separator />
+        {/* BASIC INFORMATION */}
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Basic Information</h3>
+            <Separator className="bg-primary/20" />
+          </div>
+
+          <div className="space-y-4">
+            {/* Student Origin */}
+            <div>
+              <FormRadio
+                name="student_origin"
+                label="Student Origin"
+                options={[
+                  "Overseas Student (Offshore)",
+                  "Overseas Student in Australia (Onshore)",
+                  "Resident Student (Domestic)"
+                ]}
+              />
+            </div>
+
+            {/* Title */}
+            <div>
+              <FormRadio
+                name="title"
+                label="Title"
+                options={["Mr", "Ms", "Mrs", "Other"]}
+              />
+            </div>
+
+            {/* Full Name */}
+            <div>
+              <p className="text-sm font-medium mb-2">Enter your Full Name</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Please write the name that you used when you applied for your Unique Student Identifier (USI),
+                including any middle names. If you do not have a USI please write your name exactly as written
+                in the identity document you choose to use
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormInput
+                  name="given_name"
+                  label="First Name"
+                  placeholder="Merritt"
+                />
+                <FormInput
+                  name="middle_name"
+                  label="Middle Name(Optional)"
+                  placeholder="Quinn Shaw"
+                />
+                <FormInput
+                  name="family_name"
+                  label="Last Name"
+                  placeholder="Higgins"
+                />
+              </div>
+            </div>
+
+            {/* Gender */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormRadio
+                name="gender"
+                label="Gender"
+                options={["Male", "Female", "Other"]}
+              />
+              <FormInput
+                name="date_of_birth"
+                label="Date of birth"
+                type="date"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* CONTACT DETAILS */}
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Contact Details</h3>
+            <Separator className="bg-primary/20" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput
-              name="given_name"
-              label="Given Name"
-              placeholder="John"
+              name="email"
+              label="Contact Email Address"
+              type="email"
+              placeholder="hisucug@mailinator.com"
             />
             <FormInput
-              name="middle_name"
-              label="Middle Name"
-              placeholder="Michael"
+              name="alternate_email"
+              label="Alternate Email Address(Optional)"
+              type="email"
+              placeholder="tokuxlt@mailinator.com"
             />
-            <FormInput
-              name="family_name"
-              label="Family Name"
-              placeholder="Doe"
-            />
-
-            <FormRadio
-              name="gender"
-              label="Gender"
-              options={["Male", "Female", "Other"]}
-            />
-
-            <FormInput name="date_of_birth" label="Date of Birth" type="date" />
             <FormInput
               name="phone"
-              label="Phone"
-              placeholder="+61 400 123 456"
+              label="Mobile Number"
+              placeholder="9875237523"
             />
             <FormInput
-              name="email"
-              label="Email"
-              type="email"
-              placeholder="john.doe@example.com"
+              name="home_phone"
+              label="Home Phone(Optional)"
+              placeholder="9875237523"
             />
           </div>
         </section>
 
-        {/* PASSPORT & NATIONALITY */}
-        <section className="space-y-4">
-          <div>
-            <h3 className="mb-1 font-medium">Passport & Nationality</h3>
-            <Separator />
+        {/* PASSPORT DETAILS */}
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Passport Details</h3>
+            <Separator className="bg-primary/20" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              name="country"
-              label="Country of Residence"
-              placeholder="Australia"
-            />
-            <FormInput
+            <FormSearchableSelect
               name="country_of_birth"
               label="Country of Birth"
-              placeholder="Nepal"
+              placeholder="Select country..."
+              searchPlaceholder="Search countries..."
+              options={getCountriesList()}
+              emptyMessage="No country found."
             />
-            <FormInput
+            <FormSearchableSelect
               name="nationality"
               label="Nationality"
-              placeholder="Nepalese"
+              placeholder="Select nationality..."
+              searchPlaceholder="Search nationalities..."
+              options={getNationalitiesList()}
+              emptyMessage="No nationality found."
             />
             <FormInput
               name="passport_number"
               label="Passport Number"
-              placeholder="AB1234567"
+              placeholder="19"
             />
             <FormInput
               name="passport_expiry"
-              label="Passport Expiry"
+              label="Passport Expiry Date"
               type="date"
             />
           </div>
         </section>
 
-        {/* ADDRESS */}
-        <section className="space-y-4">
-          <div>
-            <h3 className="mb-1 font-medium">Address</h3>
-            <Separator />
+        {/* VISA DETAILS - Only show for Onshore students */}
+        {methods.watch("student_origin") === "Overseas Student in Australia (Onshore)" && (
+          <section className="space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Visa Details</h3>
+              <Separator className="bg-primary/20" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormSelect
+                name="visa_type"
+                label="VISA Type"
+                placeholder="Select VISA Type"
+                options={[
+                  { value: "graduate_485", label: "Graduate 485" },
+                  { value: "student_visa", label: "Student Visa" },
+                  { value: "tourist_visitor", label: "Tourist/Visitor" },
+                  { value: "working_holiday", label: "Working Holiday" },
+                  { value: "other", label: "Other" },
+                ]}
+              />
+              <FormInput
+                name="visa_number"
+                label="VISA Number(Optional)"
+                placeholder=""
+              />
+              <FormInput
+                name="visa_expiry"
+                label="Expiry Date"
+                type="date"
+              />
+            </div>
+          </section>
+        )}
+
+        {/* RESIDENTIAL ADDRESS */}
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Residential Address</h3>
+            <Separator className="bg-primary/20" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Please provide the physical address (street number and name not post office box) where you usually
+              reside rather than any temporary address at which you reside for training, work or other purposes
+              before returning to your home.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              If you are from a rural area use the address from your state or territory's rural property addressing
+              or 'numbering' system as your residential street address.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Building/property name is the official place name or common usage name for an address site, including
+              the name of a building, Aboriginal community, homestead, building complex, agricultural property, park
+              or unbounded address site.
+            </p>
+
             <FormInput
-              name="street_address"
-              label="Street Address"
-              placeholder="123 Main Street"
+              name="search_address"
+              label="Search Address"
+              placeholder="Search Address"
             />
-            <FormInput name="suburb" label="Suburb" placeholder="Sydney" />
-            <FormInput name="state" label="State" placeholder="NSW" />
-            <FormInput name="postcode" label="Postcode" placeholder="2000" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormSearchableSelect
+                name="country"
+                label="Country"
+                placeholder="Select country..."
+                searchPlaceholder="Search countries..."
+                options={getCountriesList()}
+                emptyMessage="No country found."
+              />
+              <FormInput
+                name="building_name"
+                label="Building / Property name(Optional)"
+                placeholder="Bert Randolph"
+              />
+              <FormInput
+                name="flat_unit"
+                label="Flat / Unit(Optional)"
+                placeholder="Et culpa quis modi e"
+              />
+              <FormInput
+                name="street_number"
+                label="Street Number"
+                placeholder="549"
+              />
+              <FormInput
+                name="street_name"
+                label="Street Name"
+                placeholder="Tad Kelly"
+              />
+              <FormInput
+                name="suburb"
+                label="City/Town/Suburb"
+                placeholder="Ut porro qui in saep"
+              />
+              <FormInput
+                name="state"
+                label="State/Province"
+                placeholder="wefghjk"
+              />
+              <FormInput
+                name="postcode"
+                label="Post Code"
+                placeholder="1214"
+              />
+            </div>
           </div>
         </section>
 
-        <ApplicationStepHeader className="mt-4">
+        {/* POSTAL ADDRESS */}
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Postal Address</h3>
+            <Separator className="bg-primary/20" />
+          </div>
+
+          <div className="space-y-4">
+            <FormRadio
+              name="postal_same_as_residential"
+              label="Is your Postal address same as residential address?"
+              options={["Yes", "No"]}
+            />
+
+            {methods.watch("postal_same_as_residential") === "No" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormSearchableSelect
+                  name="postal_country"
+                  label="Country(Optional)"
+                  placeholder="Select country..."
+                  searchPlaceholder="Search countries..."
+                  options={getCountriesList()}
+                  emptyMessage="No country found."
+                />
+                <FormInput
+                  name="postal_building_name"
+                  label="Building/Property name(Optional)"
+                  placeholder="Bert Randolph"
+                />
+                <FormInput
+                  name="postal_flat_unit"
+                  label="Flat/Unit(Optional)"
+                  placeholder="Et culpa quis modi e"
+                />
+                <FormInput
+                  name="postal_street_number"
+                  label="Street Number(Optional)"
+                  placeholder="549"
+                />
+                <FormInput
+                  name="postal_street_name"
+                  label="Street Name(Optional)"
+                  placeholder="Tad Kelly"
+                />
+                <FormInput
+                  name="postal_suburb"
+                  label="City/Town/Suburb(Optional)"
+                  placeholder="Ut porro qui in saep"
+                />
+                <FormInput
+                  name="postal_state"
+                  label="State/Province(Optional)"
+                  placeholder="wefghjk"
+                />
+                <FormInput
+                  name="postal_postcode"
+                  label="Post Code(Optional)"
+                  placeholder="1214"
+                />
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* OVERSEAS/PERMANENT ADDRESS */}
+        <section className="space-y-6">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Overseas/Permanent Address</h3>
+            <Separator className="bg-primary/20" />
+          </div>
+
+          <div className="space-y-4">
+            <FormSearchableSelect
+              name="overseas_country"
+              label="Select country"
+              placeholder="Select country..."
+              searchPlaceholder="Search countries..."
+              options={getCountriesList()}
+              emptyMessage="No country found."
+            />
+
+            <FormTextarea
+              name="overseas_address"
+              label="Overseas Address(Optional)"
+              placeholder=""
+              rows={5}
+            />
+          </div>
+        </section>
+
+        <ApplicationStepHeader className="mt-8 pt-6 border-t">
           <Button type="submit" disabled={personalDetailsMutation.isPending}>
             {personalDetailsMutation.isPending
               ? "Saving..."
