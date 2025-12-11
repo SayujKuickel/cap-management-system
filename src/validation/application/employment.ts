@@ -18,7 +18,7 @@ export const employmentSchema = z.object({
 export type EmploymentFormValues = z.infer<typeof employmentSchema>;
 
 export const createEmptyEmploymentEntry =
-  (): EmploymentFormValues["entries"][number] => ({
+  (): z.infer<typeof employmentEntrySchema> => ({
     employer: "",
     role: "",
     start_date: "",
