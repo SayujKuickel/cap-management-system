@@ -1,16 +1,16 @@
 export const APPLICATION_STEP_IDS = [
-  1, // Documents
-  2, // Personal Details
-  3, // Emergency Contact
-  4, // Health Cover
-  5, // Language & Culture
-  6, // Disability
-  7, // Schooling
-  8, // Qualifications
-  9, // Employment
-  10, // USI
-  11, // Additional Services
-  12, // Survey
+  1, // Personal Details
+  2, // Emergency Contact
+  3, // Health Cover
+  4, // Language & Culture
+  5, // Disability
+  6, // Schooling
+  7, // Qualifications
+  8, // Employment
+  9, // USI
+  10, // Additional Services
+  11, // Survey
+  12, // Documents
 ] as const;
 
 export const REVIEW_STEP_ID = 13;

@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import documentService, { type DocumentType, type OcrResult } from "@/service/document.service";
 import type { ServiceResponse } from "@/types/service";
 import type { QueryValue } from "@/service/service-helpers";
-import { useApplicationFormDataStore } from "@/store/useApplicationFormData.store";
 
 // Types
 type UploadDocumentParams = {
@@ -32,74 +30,6 @@ export const useDocumentTypesQuery = () => {
     },
     staleTime: 1000 * 60 * 30, // 30 minutes - document types rarely change
   });
-};
-
-export const useDocumentOcrQuery = (applicationId: string | null) => {
-  const populateFromOcrResult = useApplicationFormDataStore(
-    (state) => state.populateFromOcrResult
-  );
-  const processedDataRef = useRef<string | null>(null);
-  const lastApplicationIdRef = useRef<string | null>(null);
-
-  const query = useQuery<ServiceResponse<OcrResult>, Error>({
-    queryKey: ["document-ocr", applicationId],
-    queryFn: async () => {
-      if (!applicationId) throw new Error("Application ID is required");
-      const response = await documentService.getOcrResults(applicationId);
-      if (!response.success) {
-        throw new Error(response.message || "Failed to fetch OCR results");
-      }
-      return response;
-    },
-    enabled: !!applicationId,
-    staleTime: 0, // Always consider data stale to ensure fresh fetches
-    refetchOnMount: true, // Always refetch when component mounts
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    // Poll every 3 seconds if there are pending OCR jobs
-    refetchInterval: (query) => {
-      const pendingCount = query.state.data?.data?.metadata?.ocr_pending;
-      return pendingCount && pendingCount > 0 ? 3000 : false;
-    },
-  });
-
-  // Reset processed data ref when applicationId changes
-  useEffect(() => {
-    if (applicationId !== lastApplicationIdRef.current) {
-      processedDataRef.current = null;
-      lastApplicationIdRef.current = applicationId;
-    }
-  }, [applicationId]);
-
-  // When OCR data is fetched, populate the store immediately
-  useEffect(() => {
-    if (query.data?.data) {
-      const dataKey = JSON.stringify(query.data.data);
-      // Always populate if data exists, even if it seems the same
-      // This ensures data is available when navigating to steps
-      if (processedDataRef.current !== dataKey) {
-        // Populate immediately
-        populateFromOcrResult(query.data.data);
-        processedDataRef.current = dataKey;
-      } else {
-        // Even if data key is the same, re-populate to ensure store is up to date
-        // This handles cases where store might have been cleared or reset
-        populateFromOcrResult(query.data.data);
-      }
-    }
-  }, [query.data?.data, populateFromOcrResult]);
-  
-  // Also populate when query becomes successful (even if data hasn't changed)
-  // This ensures data is populated on initial load and after refetch
-  useEffect(() => {
-    if (query.isSuccess && query.data?.data) {
-      // Always populate on success to ensure data is in store
-      const dataKey = JSON.stringify(query.data.data);
-      populateFromOcrResult(query.data.data);
-      processedDataRef.current = dataKey;
-    }
-  }, [query.isSuccess, query.data?.data, populateFromOcrResult]);
-
-  return query;
 };
 
 export const useDocumentQuery = (
@@ -146,9 +76,6 @@ export const useApplicationDocumentsQuery = (applicationId: string | null) => {
 // Mutation hooks
 export const useUploadDocument = () => {
   const queryClient = useQueryClient();
-  const populateFromOcrResult = useApplicationFormDataStore(
-    (state) => state.populateFromOcrResult
-  );
 
   return useMutation<
     ServiceResponse<{ process_ocr: boolean }>,
@@ -177,31 +104,6 @@ export const useUploadDocument = () => {
       queryClient.invalidateQueries({
         queryKey: ["autofill-suggestions", variables.application_id],
       });
-
-      // If OCR processing was triggered, fetch and populate OCR data
-      if (response.data?.process_ocr) {
-        // Invalidate OCR query to trigger refetch
-        queryClient.invalidateQueries({
-          queryKey: ["document-ocr", variables.application_id],
-        });
-
-        // Fetch OCR results after a short delay to allow processing
-        setTimeout(async () => {
-          try {
-            const ocrResponse = await documentService.getOcrResults(
-              variables.application_id
-            );
-            if (ocrResponse.success && ocrResponse.data) {
-              // Populate Zustand store with OCR data
-              populateFromOcrResult(ocrResponse.data);
-              toast.success("Document data extracted and prefilled!");
-            }
-          } catch (error) {
-            console.error("[Document] Failed to fetch OCR results:", error);
-            // Don't show error toast - OCR might still be processing
-          }
-        }, 2000); // Wait 2 seconds before fetching OCR results
-      }
     },
     onError: (error) => {
       toast.error(error.message || "Failed to upload document");

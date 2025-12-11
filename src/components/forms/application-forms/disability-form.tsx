@@ -23,7 +23,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function DisabilityForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 6; // Disability is step 6
+  const stepId = 5; // Disability is step 5
   const disabilityMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const form = useForm<DisabilityFormValues>({

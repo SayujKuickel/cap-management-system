@@ -19,7 +19,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function USIForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 10; // USI is step 10
+  const stepId = 9; // USI is step 9
   const usiMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<USIValues>({

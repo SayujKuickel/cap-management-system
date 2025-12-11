@@ -26,18 +26,18 @@ export type ApplicationFormStep = {
 };
 
 export const APPLICATION_FORM_STEPS: ApplicationFormStep[] = [
-  { id: 1, title: "Documents", component: DocumentsUploadForm },
-  { id: 2, title: "Personal Details", component: PersonalDetailsForm },
-  { id: 3, title: "Emergency Contact", component: EmergencyContactForm },
-  { id: 4, title: "Health Cover", component: HealthCoverForm },
-  { id: 5, title: "Language & Culture", component: LanguageCulturalForm },
-  { id: 6, title: "Disability", component: DisabilityForm },
-  { id: 7, title: "Schooling", component: SchoolingForm },
-  { id: 8, title: "Qualifications", component: QualificationsForm },
-  { id: 9, title: "Employment", component: EmploymentForm },
-  { id: 10, title: "USI", component: USIForm },
-  { id: 11, title: "Additional Services", component: AdditionalServicesForm },
-  { id: 12, title: "Survey", component: SurveyForm },
+  { id: 1, title: "Personal Details", component: PersonalDetailsForm },
+  { id: 2, title: "Emergency Contact", component: EmergencyContactForm },
+  { id: 3, title: "Health Cover", component: HealthCoverForm },
+  { id: 4, title: "Language & Culture", component: LanguageCulturalForm },
+  { id: 5, title: "Disability", component: DisabilityForm },
+  { id: 6, title: "Schooling", component: SchoolingForm },
+  { id: 7, title: "Qualifications", component: QualificationsForm },
+  { id: 8, title: "Employment", component: EmploymentForm },
+  { id: 9, title: "USI", component: USIForm },
+  { id: 10, title: "Additional Services", component: AdditionalServicesForm },
+  { id: 11, title: "Survey", component: SurveyForm },
+  { id: 12, title: "Documents", component: DocumentsUploadForm },
   { id: 13, title: "Review", component: ReviewForm },
 ];
 

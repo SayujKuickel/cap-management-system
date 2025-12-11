@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useDocuments, useDocumentTypesQuery, useDocumentOcrQuery } from "@/hooks/document.hook";
+import { useDocuments, useDocumentTypesQuery } from "@/hooks/document.hook";
 import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 import { cn } from "@/lib/utils";
 import { useApplicationStepStore } from "@/store/useApplicationStep.store";
@@ -59,7 +59,7 @@ type DocumentsFormData = {
   >;
 };
 
-const STEP_ID = 1;
+const STEP_ID = 12;
 
 // Document category mappings
 const DOCUMENT_CATEGORIES = {
@@ -185,8 +185,7 @@ export default function DocumentsUploadForm() {
     error: documentTypesError,
   } = useDocumentTypesQuery();
 
-  // Poll for OCR results - this will automatically populate the store when data is available
-  useDocumentOcrQuery(applicationId);
+
 
   const goToNext = useApplicationStepStore((state) => state.goToNext);
   const markStepCompleted = useApplicationStepStore(
@@ -741,16 +740,6 @@ export default function DocumentsUploadForm() {
                                     >
                                       {isRequired ? "Required" : "Optional"}
                                     </Badge>
-                                    {typeof docType.accepts_ocr === 'boolean' && (
-                                      <Badge
-                                        variant={docType.accepts_ocr ? "default" : "secondary"}
-                                        className="text-xs"
-                                      >
-                                        {docType.accepts_ocr
-                                          ? "Accepts OCR"
-                                          : "No OCR"}
-                                      </Badge>
-                                    )}
                                   </div>
                                 </div>
                                 {hasPersistedFiles && !isUploading && (

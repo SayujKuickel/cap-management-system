@@ -18,7 +18,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function QualificationsForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 8; // Qualifications is step 8
+  const stepId = 7; // Qualifications is step 7
   const qualificationsMutation =
     useApplicationStepMutations(applicationId)[stepId];
 

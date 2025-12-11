@@ -8,7 +8,6 @@ import {
   useApplicationCreateMutation,
   useApplicationGetMutation,
 } from "@/hooks/useApplication.hook";
-import { useDocumentOcrQuery } from "@/hooks/document.hook";
 
 type ApplicationFormContextType = {
   applicationId: string | null;
@@ -21,8 +20,6 @@ type ApplicationFormContextType = {
   saveStepData: <T>(stepId: number, data: T) => void;
   getStepData: <T>(stepId: number) => T | undefined;
   isLoading: boolean;
-  isOcrDataLoading: boolean;
-  isOcrDataReady: boolean;
 };
 
 const ApplicationFormContext = createContext<ApplicationFormContextType | null>(
@@ -68,92 +65,6 @@ export const ApplicationFormProvider: React.FC<{
   const createApplication = useApplicationCreateMutation();
   const { mutate: fetchApplication, isPending: isFetchingApplication } =
     useApplicationGetMutation(applicationId);
-
-
-  const ocrQuery = useDocumentOcrQuery(applicationId);
-
-
-  const needsOcrData = currentStep >= 2 && currentStep <= 12;
-
-
-  const [hasLoadedOnce, setHasLoadedOnce] = React.useState(false);
-
-
-  const isOcrDataLoading = needsOcrData && !hasLoadedOnce && (ocrQuery.isFetching || ocrQuery.isLoading);
-
-
-  const ocrData = useApplicationFormDataStore((state) => state.ocrData);
-  const lastRefetchedStepRef = React.useRef<number | null>(null);
-
-
-  useEffect(() => {
-    if (ocrQuery.isSuccess && ocrQuery.data?.data) {
-      setHasLoadedOnce(true);
-    }
-  }, [ocrQuery.isSuccess, ocrQuery.data]);
-
-
-  useEffect(() => {
-    setHasLoadedOnce(false);
-  }, [applicationId]);
-
-
-  const isOcrDataReady = React.useMemo(() => {
-    if (!needsOcrData) {
-      // Step 1 doesn't need OCR data
-      return true;
-    }
-
-    if (!applicationId) {
-      return false;
-    }
-
-
-    if (hasLoadedOnce) {
-      return true;
-    }
-
-
-    if (ocrQuery.isFetching || ocrQuery.isLoading) {
-      return false;
-    }
-
-
-    if (ocrQuery.isSuccess && ocrQuery.data?.data) {
-      // Check if data has been populated into store
-      const hasOcrDataInStore = Object.keys(ocrData).length > 0;
-      return hasOcrDataInStore;
-    }
-
-    // If query finished (error or no data), allow proceeding anyway
-    if (ocrQuery.isError || (!ocrQuery.isFetching && !ocrQuery.isLoading)) {
-      return true;
-    }
-
-    // Default: not ready
-    return false;
-  }, [needsOcrData, applicationId, hasLoadedOnce, ocrQuery.isFetching, ocrQuery.isLoading, ocrQuery.isSuccess, ocrQuery.data, ocrQuery.isError, ocrData]);
-
-  // Force refetch OCR data when navigating to steps that might need it (steps 2-12)
-  useEffect(() => {
-    if (applicationId && needsOcrData) {
-      // Only refetch if we haven't already refetched for this step
-      if (lastRefetchedStepRef.current !== currentStep) {
-        lastRefetchedStepRef.current = currentStep;
-
-        // Check if we already have OCR data in store
-        const store = useApplicationFormDataStore.getState();
-        const hasOcrData = Object.keys(store.ocrData).length > 0;
-
-        if (!hasOcrData || !ocrQuery.data?.data) {
-          // Need to fetch OCR data
-          ocrQuery.refetch().catch((error) => {
-            console.error('[ApplicationForm] Failed to refetch OCR data:', error);
-          });
-        }
-      }
-    }
-  }, [applicationId, currentStep, ocrQuery, needsOcrData]);
 
   // Initialize application
   useEffect(() => {
@@ -220,8 +131,6 @@ export const ApplicationFormProvider: React.FC<{
     saveStepData: saveStepDataWrapper,
     getStepData: getStepDataWrapper,
     isLoading: createApplication.isPending || isFetchingApplication,
-    isOcrDataLoading,
-    isOcrDataReady,
   };
 
   return (

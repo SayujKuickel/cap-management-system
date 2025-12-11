@@ -19,7 +19,7 @@ import { useFormPersistence } from "@/hooks/useFormPersistence.hook";
 export default function EmploymentForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 9; // Employment is step 9
+  const stepId = 8; // Employment is step 8
   const employmentMutation = useApplicationStepMutations(applicationId)[stepId];
 
   const methods = useForm<EmploymentFormValues>({

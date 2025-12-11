@@ -21,7 +21,7 @@ import { useApplicationFormDataStore } from "@/store/useApplicationFormData.stor
 export default function HealthCoverForm() {
   const searchParams = useSearchParams();
   const applicationId = searchParams.get("applicationId");
-  const stepId = 4; // Health Cover is step 4
+  const stepId = 3; // Health Cover is step 3
   const healthCoverMutation = useApplicationStepMutations(applicationId)[stepId];
   const getStepData = useApplicationFormDataStore((state) => state.getStepData);
 
