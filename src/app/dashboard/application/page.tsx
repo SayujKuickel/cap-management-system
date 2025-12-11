@@ -24,7 +24,7 @@ const AgentApplicationPage = () => {
       : `Applications (${total ?? 0})`;
 
   return (
-    <section className="space-y-6 wrapper w-full max-w-full">
+    <section className="space-y-6 wrapper w-full max-w-[100vw] overflow-x-hidden">
       <h1 className="text-3xl font-semibold text-foreground">{heading}</h1>
 
       {error ? (

@@ -38,7 +38,7 @@ export function DataTableToolbar<TData>({
     table.getState().columnFilters.length > 0 || !!searchValue?.length;
 
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full max-w-full overflow-hidden">
       <div className="flex flex-1 flex-wrap items-center gap-2">
         {typeof searchValue === "string" && onSearch ? (
           <Input

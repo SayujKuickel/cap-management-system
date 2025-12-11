@@ -28,7 +28,7 @@ export const ApplicationTable = ({
   isKanban = false,
   isallowMovingInKanban = false,
 }: ApplicationTableProps) => {
-  const [view, setView] = React.useState<"table" | "kanban">("table");
+  const [view, setView] = React.useState<"table" | "kanban">("kanban");
 
   const filters = React.useMemo<DataTableFacetedFilter[]>(
     () => [

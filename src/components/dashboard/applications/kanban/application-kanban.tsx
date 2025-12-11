@@ -265,7 +265,7 @@ export function ApplicationKanban({
       collisionDetection={closestCorners}
       modifiers={[restrictToWindowEdges]}
     >
-      <div className="w-full overflow-x-auto small-sidebar-width pb-4">
+      <div className="w-full overflow-x-auto   pb-4">
         <div className="inline-flex gap-4 min-w-full">
           {statuses.map((status) => (
             <KanbanColumns

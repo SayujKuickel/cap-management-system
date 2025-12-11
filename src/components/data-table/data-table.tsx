@@ -157,7 +157,7 @@ export function DataTable<TData, TValue>({
   const router = useRouter();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-x-hidden w-full max-w-full">
       <DataTableToolbar
         table={table}
         columnVisibility={columnVisibility}
@@ -189,9 +189,9 @@ export function DataTable<TData, TValue>({
                         {header.isPlaceholder
                           ? null
                           : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                       </TableHead>
                     );
                   })}
@@ -259,13 +259,13 @@ export function DataTable<TData, TValue>({
           </Table>
         </div>
       ) : (
-        <div className="rounded-md border w-full small-sidebar-width ">
+        <div className="rounded-md border  max-w-[1190px]">
           <ApplicationKanban data={data as Application[]} isallowMovingInKanban={isallowMovingInKanban} />
         </div>
       )}
 
       <div className="flex flex-col gap-2 px-1 py-1 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-      
+
         {enableLocalPagination ? (
           <div className="flex items-center justify-end gap-2">
             <Button
