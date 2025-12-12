@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { Suspense } from "react";
 import { AlertCircle, ArrowLeft, Home, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +35,7 @@ const errorMessages: Record<string, { title: string; description: string }> = {
     },
 };
 
-export default function AuthErrorPage() {
+function ErrorContent() {
     const searchParams = useSearchParams();
     const error = searchParams.get("error") || "Default";
 
@@ -101,5 +102,24 @@ export default function AuthErrorPage() {
                 </CardContent>
             </Card>
         </div>
+    );
+}
+
+export default function AuthErrorPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+                            <AlertCircle className="h-8 w-8 text-destructive animate-pulse" />
+                        </div>
+                        <CardTitle className="text-2xl">Loading...</CardTitle>
+                    </CardHeader>
+                </Card>
+            </div>
+        }>
+            <ErrorContent />
+        </Suspense>
     );
 }

@@ -97,7 +97,7 @@ export default function ReviewForm() {
             <DataField label="Phone" value={application.personal_details.phone} />
             <DataField label="Date of Birth" value={application.personal_details.date_of_birth} />
             <DataField label="Gender" value={application.personal_details.gender} />
-            <DataField label="Street Address" value={application.personal_details.street_address} />
+            <DataField label="Street Address" value={application.personal_details.street_name} />
             <DataField label="Suburb" value={application.personal_details.suburb} />
             <DataField label="State" value={application.personal_details.state} />
             <DataField label="Postcode" value={application.personal_details.postcode} />
@@ -144,9 +144,9 @@ export default function ReviewForm() {
         {application.language_cultural_data && (
           <ReviewSection title="Language & Cultural Information">
             <DataField label="First Language" value={application.language_cultural_data.first_language} />
-            <DataField 
-              label="Other Languages" 
-              value={application.language_cultural_data.other_languages?.join(", ")} 
+            <DataField
+              label="Other Languages"
+              value={application.language_cultural_data.other_languages?.join(", ")}
             />
             <DataField label="Indigenous Status" value={application.language_cultural_data.indigenous_status} />
             <DataField label="Country of Birth" value={application.language_cultural_data.country_of_birth} />
@@ -160,9 +160,9 @@ export default function ReviewForm() {
         {/* Disability Support */}
         {application.disability_support && (
           <ReviewSection title="Disability Support">
-            <DataField 
-              label="Has Disability" 
-              value={application.disability_support.has_disability ? "Yes" : "No"} 
+            <DataField
+              label="Has Disability"
+              value={application.disability_support.has_disability ? "Yes" : "No"}
             />
             {application.disability_support.has_disability && (
               <>
@@ -188,9 +188,9 @@ export default function ReviewForm() {
                   <DataField label="Start Year" value={school.start_year} />
                   <DataField label="End Year" value={school.end_year} />
                   <DataField label="Result" value={school.result} />
-                  <DataField 
-                    label="Currently Attending" 
-                    value={school.currently_attending ? "Yes" : "No"} 
+                  <DataField
+                    label="Currently Attending"
+                    value={school.currently_attending ? "Yes" : "No"}
                   />
                 </div>
               </div>
@@ -243,9 +243,9 @@ export default function ReviewForm() {
         {application.usi && (
           <ReviewSection title="USI (Unique Student Identifier)">
             <DataField label="USI Number" value={application.usi} />
-            <DataField 
-              label="USI Verified" 
-              value={application.usi_verified ? "Yes" : "No"} 
+            <DataField
+              label="USI Verified"
+              value={application.usi_verified ? "Yes" : "No"}
             />
             {application.usi_verified_at && (
               <DataField label="Verified At" value={new Date(application.usi_verified_at).toLocaleString()} />
@@ -258,24 +258,24 @@ export default function ReviewForm() {
           (Array.isArray(application.additional_services) && application.additional_services.length > 0) ||
           (typeof application.additional_services === 'object' && 'services' in application.additional_services && Array.isArray(application.additional_services.services) && application.additional_services.services.length > 0)
         ) && (
-          <ReviewSection title="Additional Services">
-            {(() => {
-              const services = Array.isArray(application.additional_services) 
-                ? application.additional_services 
-                : (application.additional_services as any)?.services || [];
-              return services.map((service: any, index: number) => (
-                <div key={index} className="mb-3 last:mb-0">
-                  {index > 0 && <Separator className="my-3" />}
-                  <div className="space-y-0">
-                    <DataField label="Service Name" value={service.name} />
-                    <DataField label="Service ID" value={service.service_id} />
-                    <DataField label="Fee" value={service.fee ? `$${service.fee}` : null} />
+            <ReviewSection title="Additional Services">
+              {(() => {
+                const services = Array.isArray(application.additional_services)
+                  ? application.additional_services
+                  : (application.additional_services as any)?.services || [];
+                return services.map((service: any, index: number) => (
+                  <div key={index} className="mb-3 last:mb-0">
+                    {index > 0 && <Separator className="my-3" />}
+                    <div className="space-y-0">
+                      <DataField label="Service Name" value={service.name} />
+                      <DataField label="Service ID" value={service.service_id} />
+                      <DataField label="Fee" value={service.fee ? `$${service.fee}` : null} />
+                    </div>
                   </div>
-                </div>
-              ));
-            })()}
-          </ReviewSection>
-        )}
+                ));
+              })()}
+            </ReviewSection>
+          )}
 
         {/* Survey Responses */}
         {application.survey_responses && application.survey_responses.length > 0 && (
@@ -297,11 +297,11 @@ export default function ReviewForm() {
         {application.form_metadata && (
           <ReviewSection title="Application Information">
             <DataField label="Form Version" value={application.form_metadata.version} />
-            <DataField 
-              label="Last Saved" 
-              value={application.form_metadata.last_saved_at 
-                ? new Date(application.form_metadata.last_saved_at).toLocaleString() 
-                : null} 
+            <DataField
+              label="Last Saved"
+              value={application.form_metadata.last_saved_at
+                ? new Date(application.form_metadata.last_saved_at).toLocaleString()
+                : null}
             />
             <DataField label="Last Edited Section" value={application.form_metadata.last_edited_section} />
             <DataField label="Auto Save Count" value={application.form_metadata.auto_save_count} />
