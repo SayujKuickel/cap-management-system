@@ -4,7 +4,7 @@ import { useApplicationFormDataStore } from "./useApplicationFormData.store";
 
 // ⚠️ TESTING MODE: Set to 'true' to allow free navigation during testing
 // Set to 'false' in production to enforce step completion before navigation
-const TESTING_MODE = true;
+const TESTING_MODE = false;
 
 type ApplicationStepState = {
   currentStep: number;
